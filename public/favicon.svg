@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="MagicY8">
+  <defs>
+    <linearGradient id="bg" x1="15" y1="12" x2="113" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7c3aed"/>
+      <stop offset=".5" stop-color="#4f46e5"/>
+      <stop offset="1" stop-color="#0891b2"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="33" y1="24" x2="95" y2="105" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff7ed"/>
+      <stop offset=".45" stop-color="#f5d0fe"/>
+      <stop offset="1" stop-color="#67e8f9"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.52 0 0 0 0 0.21 0 0 0 0 1 0 0 0 .8 0"/>
+      <feBlend in="SourceGraphic"/>
+    </filter>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="#030712"/>
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="url(#bg)"/>
+  <path fill="#020617" opacity=".35" d="M16 91c18 14 39 22 62 20 16-1 29-7 42-18v27H16V91Z"/>
+  <g filter="url(#glow)">
+    <path fill="url(#spark)" d="M66 18 47 58H25l29 18-11 34 31-42h24L73 51l15-33H66Z"/>
+    <circle cx="93" cy="35" r="7" fill="#fef3c7"/>
+    <circle cx="34" cy="31" r="4" fill="#bae6fd"/>
+    <circle cx="96" cy="94" r="5" fill="#f0abfc"/>
+  </g>
+  <text x="64" y="100" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="900" letter-spacing="-1" fill="#ffffff">Y8</text>
+</svg>
