@@ -46,85 +46,85 @@ const BODY_PART_DESCRIPTIONS: Record<string, string> = {
 
 const bodyParts = createListCollection({
   items: [
-    { label: "Outer forearm", value: "outer_forearm" },
-    { label: "Inner forearm", value: "inner_forearm" },
-    { label: "Wrist", value: "wrist" },
-    { label: "Upper arm / bicep", value: "upper_arm" },
-    { label: "Shoulder", value: "shoulder" },
-    { label: "Upper back", value: "upper_back" },
-    { label: "Full back", value: "full_back" },
-    { label: "Chest / pectoral area", value: "chest" },
-    { label: "Side ribs", value: "side_ribs" },
-    { label: "Thigh", value: "thigh" },
-    { label: "Calf", value: "calf" },
-    { label: "Ankle", value: "ankle" },
-    { label: "Hand", value: "hand" },
-    { label: "Finger", value: "finger" },
-    { label: "Side of neck", value: "side_neck" },
+    { label: "Outer forearm / බාහිර forearm", value: "outer_forearm" },
+    { label: "Inner forearm / ඇතුල් forearm", value: "inner_forearm" },
+    { label: "Wrist / මැණික් කටුව", value: "wrist" },
+    { label: "Upper arm / ඉහළ අත", value: "upper_arm" },
+    { label: "Shoulder / උරහිස", value: "shoulder" },
+    { label: "Upper back / ඉහළ පිට", value: "upper_back" },
+    { label: "Full back / සම්පූර්ණ පිට", value: "full_back" },
+    { label: "Chest / පපුව", value: "chest" },
+    { label: "Side ribs / පැත්ත", value: "side_ribs" },
+    { label: "Thigh / කලවා", value: "thigh" },
+    { label: "Calf / පහළ කකුල", value: "calf" },
+    { label: "Ankle / ankle", value: "ankle" },
+    { label: "Hand / අත", value: "hand" },
+    { label: "Finger / ඇඟිල්ල", value: "finger" },
+    { label: "Side of neck / බෙල්ල පැත්ත", value: "side_neck" },
   ],
 })
 
 const tattooStyles = createListCollection({
   items: [
-    { label: "Realistic", value: "Realistic" },
-    { label: "Blackwork", value: "Blackwork" },
-    { label: "Fine Line", value: "Fine line" },
-    { label: "Traditional", value: "Traditional" },
-    { label: "Neo-Traditional", value: "Neo-traditional" },
-    { label: "Watercolor", value: "Watercolor" },
-    { label: "Geometric", value: "Geometric" },
-    { label: "Japanese", value: "Japanese" },
-    { label: "Tribal", value: "Tribal" },
-    { label: "Minimalist", value: "Minimalist" },
+    { label: "Realistic / ඇත්ත වගේ", value: "Realistic" },
+    { label: "Blackwork / කළු bold art", value: "Blackwork" },
+    { label: "Fine Line / සිහින් line", value: "Fine line" },
+    { label: "Traditional / classic tattoo", value: "Traditional" },
+    { label: "Neo-Traditional / modern classic", value: "Neo-traditional" },
+    { label: "Watercolor / දියසායම් look", value: "Watercolor" },
+    { label: "Geometric / හැඩතල art", value: "Geometric" },
+    { label: "Japanese / Japanese style", value: "Japanese" },
+    { label: "Tribal / tribal pattern", value: "Tribal" },
+    { label: "Minimalist / simple clean", value: "Minimalist" },
   ],
 })
 
 const inkStyles = createListCollection({
   items: [
-    { label: "Black ink", value: "Black ink" },
-    { label: "Color ink", value: "Color ink" },
-    { label: "Black & grey", value: "Black and grey" },
-    { label: "White ink", value: "White ink" },
-    { label: "Red ink", value: "Red ink" },
-    { label: "Full color palette", value: "Full color palette" },
+    { label: "Black ink / කළු ink", value: "Black ink" },
+    { label: "Color ink / පාට ink", value: "Color ink" },
+    { label: "Black & grey / කළු-අළු", value: "Black and grey" },
+    { label: "White ink / සුදු ink", value: "White ink" },
+    { label: "Red ink / රතු ink", value: "Red ink" },
+    { label: "Full color palette / full පාට", value: "Full color palette" },
   ],
 })
 
 const subjectGenders = createListCollection({
   items: [
-    { label: "Woman", value: "woman" },
-    { label: "Man", value: "man" },
+    { label: "Woman / කාන්තාව", value: "woman" },
+    { label: "Man / පිරිමි", value: "man" },
   ],
 })
 
 const cameraMovements = createListCollection({
   items: [
-    { label: "Macro close-up", value: "Macro close-up" },
-    { label: "Slow push-in", value: "Slow push-in" },
-    { label: "Static locked-off", value: "Static locked-off shot" },
-    { label: "Slow pan", value: "Slow pan" },
-    { label: "Handheld", value: "Handheld" },
+    { label: "Macro close-up / ලඟම shot", value: "Macro close-up" },
+    { label: "Slow push-in / හෙමින් zoom", value: "Slow push-in" },
+    { label: "Static locked-off / camera නොසෙලවෙන", value: "Static locked-off shot" },
+    { label: "Slow pan / පැත්තට slow move", value: "Slow pan" },
+    { label: "Handheld / අතින් camera feel", value: "Handheld" },
   ],
 })
 
 const lightings = createListCollection({
   items: [
-    { label: "Studio rim lighting", value: "Studio rim lighting" },
-    { label: "Soft daylight", value: "Soft daylight" },
-    { label: "Warm tungsten", value: "Warm tungsten" },
-    { label: "Cool overhead", value: "Cool overhead" },
-    { label: "Cinematic spotlight", value: "Cinematic spotlight" },
+    { label: "Studio rim lighting / studio edge light", value: "Studio rim lighting" },
+    { label: "Soft daylight / soft daylight", value: "Soft daylight" },
+    { label: "Warm tungsten / උණුසුම් light", value: "Warm tungsten" },
+    { label: "Cool overhead / ඉහළ cool light", value: "Cool overhead" },
+    { label: "Cinematic spotlight / film spotlight", value: "Cinematic spotlight" },
   ],
 })
 
 const processStyles = createListCollection({
   items: [
-    { label: "Mystery Macro Build", value: "mystery_macro_build" },
-    { label: "Fragment to Final", value: "fragment_to_final" },
-    { label: "Fast Stroke Assembly", value: "fast_stroke_assembly" },
-    { label: "Stencil to Final", value: "stencil_to_final" },
-    { label: "Layer-by-Layer Color", value: "layer_by_layer_color" },
-    { label: "Final Pullback View", value: "final_pullback_view" },
+    { label: "Mystery Macro Build / මුලදී රහස් macro", value: "mystery_macro_build" },
+    { label: "Fragment to Final / කොටස් එකතු වෙනවා", value: "fragment_to_final" },
+    { label: "Fast Stroke Assembly / ඉක්මන් line build", value: "fast_stroke_assembly" },
+    { label: "Stencil to Final / stencil සිට final", value: "stencil_to_final" },
+    { label: "Layer-by-Layer Color / layer වලින් පාට", value: "layer_by_layer_color" },
+    { label: "Final Pullback View / අන්තිමට full view", value: "final_pullback_view" },
   ],
 })
 
@@ -345,8 +345,8 @@ export function TattooVideoGenerator({
               <Text as="span" color="orange.400" fontWeight="medium">
                 Fixed duration:
               </Text>{" "}
-              All tattoo video prompts are designed for exactly 10 seconds — one
-              continuous shot, one body part, professional studio setting.
+              All tattoo video prompts are designed for exactly 10 seconds - එක
+              continuous shot, එක body part, professional studio setting.
             </Text>
           </HStack>
         </Box>
@@ -435,47 +435,47 @@ export function TattooVideoGenerator({
             letterSpacing="wider"
             css={{ textTransform: "uppercase", fontSize: "0.68rem" }}
           >
-            Style &amp; Placement
+            Style &amp; Placement / Style සහ ස්ථානය
           </Text>
         </HStack>
         <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap="3">
           <SelectField
-            label="Tattoo Style"
+            label="Tattoo Style / ටැටූ style"
             collection={tattooStyles}
             value={[form.tattooStyle]}
             onChange={([v]) => setField("tattooStyle", v ?? "Realistic")}
             accentColor="orange"
           />
           <SelectField
-            label="Select Body Part"
+            label="Select Body Part / ශරීර කොටස"
             collection={bodyParts}
             value={[form.bodyPart]}
             onChange={([v]) => setField("bodyPart", v ?? "outer_forearm")}
             accentColor="orange"
           />
           <SelectField
-            label="Ink Style / Color"
+            label="Ink Style / Color / ink පාට"
             collection={inkStyles}
             value={[form.inkStyle]}
             onChange={([v]) => setField("inkStyle", v ?? "Black ink")}
             accentColor="orange"
           />
           <SelectField
-            label="Subject"
+            label="Subject / කෙනා"
             collection={subjectGenders}
             value={[form.subjectGender]}
             onChange={([v]) => setField("subjectGender", v ?? "woman")}
             accentColor="orange"
           />
           <SelectField
-            label="Video Style"
+            label="Video Style / වීඩියෝ ක්‍රමය"
             collection={processStyles}
             value={[form.revealStyle]}
             onChange={([v]) => setField("revealStyle", v ?? "mystery_macro_build")}
             accentColor="orange"
           />
           <SelectField
-            label="Color Mode"
+            label="Color Mode / පාට වර්ගය"
             collection={colorModes}
             value={[form.colorMode]}
             onChange={([v]) => setField("colorMode", v ?? "black_grey")}
@@ -507,19 +507,19 @@ export function TattooVideoGenerator({
             letterSpacing="wider"
             css={{ textTransform: "uppercase", fontSize: "0.68rem" }}
           >
-            Camera &amp; Lighting
+            Camera &amp; Lighting / කැමරා සහ ආලෝකය
           </Text>
         </HStack>
         <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap="3">
           <SelectField
-            label="Camera Movement"
+            label="Camera Movement / කැමරා ගමන"
             collection={cameraMovements}
             value={[form.cameraMovement]}
             onChange={([v]) => setField("cameraMovement", v ?? "Macro close-up")}
             accentColor="orange"
           />
           <SelectField
-            label="Lighting"
+            label="Lighting / ආලෝකය"
             collection={lightings}
             value={[form.lighting]}
             onChange={([v]) => setField("lighting", v ?? "Studio rim lighting")}
@@ -544,7 +544,7 @@ export function TattooVideoGenerator({
             variant="solid"
             fontSize="0.75rem"
           >
-            9:16 vertical · 10 seconds (fixed)
+            9:16 vertical / සිරස් video - 10 seconds fixed
           </Badge>
         </HStack>
       </MotionBox>
@@ -600,7 +600,7 @@ export function TattooVideoGenerator({
                 >
                   <Icon fontSize="xl"><LuPenTool /></Icon>
                 </motion.span>
-                <Text fontWeight="bold">Generate Tattoo Video Prompt</Text>
+                <Text fontWeight="bold">Generate Tattoo Video Prompt / ටැටූ prompt හදන්න</Text>
                 <Icon fontSize="xl"><LuVideo /></Icon>
               </HStack>
             )}

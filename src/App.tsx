@@ -426,7 +426,7 @@ export default function App() {
               >
                 <HStack gap="1.5">
                   <Icon fontSize="sm"><LuWandSparkles /></Icon>
-                  <Text>Nails Style Video</Text>
+                  <Text>Nails Style Video / නිය වීඩියෝ</Text>
                 </HStack>
               </Tabs.Trigger>
               <Tabs.Trigger
@@ -448,7 +448,7 @@ export default function App() {
               >
                 <HStack gap="1.5">
                   <Icon fontSize="sm"><LuPenTool /></Icon>
-                  <Text>Tattoo Video Generator</Text>
+                  <Text>Tattoo Video Generator / ටැටූ වීඩියෝ</Text>
                 </HStack>
               </Tabs.Trigger>
             </Tabs.List>

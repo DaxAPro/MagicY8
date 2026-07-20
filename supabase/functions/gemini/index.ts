@@ -423,6 +423,19 @@ function tokenSimilarity(a: string, b: string): number {
   return union > 0 ? intersection / union : 0;
 }
 
+function hasUnsafeFailLookStyle(text: string): boolean {
+  const pattern = /\b(botched|fail-looking|failed|failure|ugly|chaotic|random scribbles?|ink blotch?|black ink blob|huge mistake|ruined|messy blobs?|wipe-off|wipe away|wipes away|hidden-art|one-step trick|magic reveal|sudden reveal)\b/gi;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    const before = text.slice(Math.max(0, match.index - 40), match.index).toLowerCase();
+    if (/\b(avoid|no|not|never|without|prevent|exclude|must avoid|do not)\b/.test(before)) {
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
 /** Count meaningful production-detail tokens added vs the original */
 function countAddedDetails(original: string, improved: string): number {
   const origTokens = new Set(tokenize(original));
@@ -463,7 +476,7 @@ function validatePromptQuality(
     return { passed: false, reason: "generic_quality_stuffing" };
   }
 
-  if (/\b(botched|fail-looking|failed|failure|ugly|chaotic|random scribbles?|ink blotch?|black ink blob|huge mistake|ruined|messy blobs?|wipe-off|wipe away|wipes away|hidden-art|one-step trick|magic reveal|sudden reveal)\b/i.test(generated)) {
+  if (hasUnsafeFailLookStyle(generated)) {
     return { passed: false, reason: "forbidden_fail_look_style" };
   }
 
