@@ -117,13 +117,23 @@ const lightings = createListCollection({
   ],
 })
 
-const revealStyles = createListCollection({
+const processStyles = createListCollection({
   items: [
-    { label: "Botched Wipe Reveal", value: "botched_wipe_reveal" },
-    { label: "Scribble Illusion", value: "scribble_illusion" },
-    { label: "Second-Skin Peel", value: "second_skin_peel" },
-    { label: "Single-Line Illusion", value: "single_line_illusion" },
-    { label: "Ink Blot Galaxy", value: "ink_blot_galaxy" },
+    { label: "Stencil to Linework", value: "stencil_to_linework" },
+    { label: "Linework to Shading", value: "linework_to_shading" },
+    { label: "Layered Detail Build", value: "layered_detail_build" },
+    { label: "Color Fill Process", value: "color_fill_process" },
+    { label: "Final Cleanup Polish", value: "final_cleanup_polish" },
+  ],
+})
+
+const colorModes = createListCollection({
+  items: [
+    { label: "Black & White", value: "black_white" },
+    { label: "Black & Grey", value: "black_grey" },
+    { label: "Single Accent Color", value: "single_accent" },
+    { label: "Full Color", value: "full_color" },
+    { label: "Artist Choice", value: "artist_choice" },
   ],
 })
 
@@ -160,7 +170,8 @@ export function TattooVideoGenerator({
     lighting: initialForm?.lighting ?? "Studio rim lighting",
     aspectRatio: fixedVerticalAspectRatio,
     subjectGender: initialForm?.subjectGender ?? "woman",
-    revealStyle: initialForm?.revealStyle ?? "botched_wipe_reveal",
+    revealStyle: initialForm?.revealStyle ?? "stencil_to_linework",
+    colorMode: initialForm?.colorMode ?? "black_grey",
   })
 
   const [output, setOutput] = useState("")
@@ -263,6 +274,7 @@ export function TattooVideoGenerator({
         inkStyle: form.inkStyle,
         subjectGender: form.subjectGender,
         revealStyle: form.revealStyle,
+        colorMode: form.colorMode,
         generationId: genId,
         sheetSaved: finalSheetSaved,
         sheetError: finalSheetError,
@@ -455,10 +467,17 @@ export function TattooVideoGenerator({
             accentColor="orange"
           />
           <SelectField
-            label="Reveal Style"
-            collection={revealStyles}
+            label="Process Style"
+            collection={processStyles}
             value={[form.revealStyle]}
-            onChange={([v]) => setField("revealStyle", v ?? "botched_wipe_reveal")}
+            onChange={([v]) => setField("revealStyle", v ?? "stencil_to_linework")}
+            accentColor="orange"
+          />
+          <SelectField
+            label="Color Mode"
+            collection={colorModes}
+            value={[form.colorMode]}
+            onChange={([v]) => setField("colorMode", v ?? "black_grey")}
             accentColor="orange"
           />
         </Grid>

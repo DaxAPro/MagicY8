@@ -123,6 +123,7 @@ export default function App() {
           aspectRatio: "9:16",
           subjectGender: entry.subjectGender,
           revealStyle: entry.revealStyle,
+          colorMode: entry.colorMode,
         },
       })
     } else {
@@ -135,6 +136,7 @@ export default function App() {
           nailShape: entry.nailShape,
           nailColor: entry.nailColor,
           revealStyle: entry.revealStyle,
+          colorMode: entry.colorMode,
         },
       })
     }

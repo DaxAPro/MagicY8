@@ -27,6 +27,7 @@ export interface HistoryEntry {
   inkStyle?: string;
   subjectGender?: string;
   revealStyle?: string;
+  colorMode?: string;
   nailStyle?: string;
   nailShape?: string;
   nailColor?: string;
@@ -73,6 +74,7 @@ export interface TattooVideoFormState {
   aspectRatio: string;
   subjectGender: string;
   revealStyle: string;
+  colorMode: string;
 }
 
 export interface NailsVideoFormState {
@@ -84,4 +86,5 @@ export interface NailsVideoFormState {
   cameraMovement: string;
   lighting: string;
   revealStyle: string;
+  colorMode: string;
 }

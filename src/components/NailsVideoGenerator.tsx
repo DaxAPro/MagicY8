@@ -83,13 +83,23 @@ const lightings = createListCollection({
   ],
 })
 
-const revealStyles = createListCollection({
+const processStyles = createListCollection({
   items: [
-    { label: "Wet Polish Drop", value: "wet_polish_drop" },
-    { label: "Drag Marble Reveal", value: "drag_marble_reveal" },
-    { label: "Cat Eye Magnet Pull", value: "cat_eye_magnet_pull" },
-    { label: "Messy Glitter Cleanup", value: "messy_glitter_cleanup" },
-    { label: "Blooming Gel Flower", value: "blooming_gel_flower" },
+    { label: "Base to Detail", value: "base_to_detail" },
+    { label: "Line Art Build", value: "line_art_build" },
+    { label: "Layered Gel Design", value: "layered_gel_design" },
+    { label: "Chrome Finish Pass", value: "chrome_finish_pass" },
+    { label: "Floral Detail Build", value: "floral_detail_build" },
+  ],
+})
+
+const colorModes = createListCollection({
+  items: [
+    { label: "Black & White", value: "black_white" },
+    { label: "Soft Pastel", value: "soft_pastel" },
+    { label: "Neon Accent", value: "neon_accent" },
+    { label: "Full Color", value: "full_color" },
+    { label: "Artist Choice", value: "artist_choice" },
   ],
 })
 
@@ -116,7 +126,8 @@ export function NailsVideoGenerator({
     nailColor: initialForm?.nailColor ?? "Pearl pink",
     cameraMovement: initialForm?.cameraMovement ?? "Macro push-in",
     lighting: initialForm?.lighting ?? "Soft beauty lighting",
-    revealStyle: initialForm?.revealStyle ?? "wet_polish_drop",
+    revealStyle: initialForm?.revealStyle ?? "base_to_detail",
+    colorMode: initialForm?.colorMode ?? "soft_pastel",
   })
   const [output, setOutput] = useState("")
   const [loading, setLoading] = useState(false)
@@ -181,6 +192,7 @@ export function NailsVideoGenerator({
         nailShape: form.nailShape,
         nailColor: form.nailColor,
         revealStyle: form.revealStyle,
+        colorMode: form.colorMode,
         generationId: result.generationId,
         sheetSaved: result.sheetSaved,
         sheetError: result.sheetError,
@@ -204,7 +216,7 @@ export function NailsVideoGenerator({
     <VStack gap="4" align="stretch">
       <MotionBox initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} p="4" borderRadius="2xl" css={{ background: "rgba(255,255,255,0.03)", borderWidth: "1px", borderColor: "rgba(236,72,153,0.18)" }}>
         <Text fontWeight="bold" color="pink.200">Nails Style Video</Text>
-        <Text textStyle="xs" color="gray.500" mt="1">9:16 girls nail style video prompts with curiosity hook and clean final reveal.</Text>
+        <Text textStyle="xs" color="gray.500" mt="1">9:16 nail style videos with clean step-by-step art creation and polished final view.</Text>
       </MotionBox>
 
       <MotionBox initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} p="4" borderRadius="2xl" css={{ background: "rgba(255,255,255,0.03)", borderWidth: "1px", borderColor: "rgba(236,72,153,0.15)" }}>
@@ -215,7 +227,8 @@ export function NailsVideoGenerator({
           <SelectField label="Color Palette" collection={nailColors} value={[form.nailColor]} onChange={([v]) => setField("nailColor", v ?? "Pearl pink")} accentColor="pink" />
           <SelectField label="Camera" collection={cameraMovements} value={[form.cameraMovement]} onChange={([v]) => setField("cameraMovement", v ?? "Macro push-in")} accentColor="pink" />
           <SelectField label="Lighting" collection={lightings} value={[form.lighting]} onChange={([v]) => setField("lighting", v ?? "Soft beauty lighting")} accentColor="pink" />
-          <SelectField label="Reveal Style" collection={revealStyles} value={[form.revealStyle]} onChange={([v]) => setField("revealStyle", v ?? "wet_polish_drop")} accentColor="pink" />
+          <SelectField label="Process Style" collection={processStyles} value={[form.revealStyle]} onChange={([v]) => setField("revealStyle", v ?? "base_to_detail")} accentColor="pink" />
+          <SelectField label="Color Mode" collection={colorModes} value={[form.colorMode]} onChange={([v]) => setField("colorMode", v ?? "soft_pastel")} accentColor="pink" />
         </Grid>
       </MotionBox>
 

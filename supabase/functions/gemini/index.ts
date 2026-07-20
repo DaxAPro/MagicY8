@@ -211,7 +211,7 @@ function validateGeneratePayload(payload: GeneratePromptPayload): string | null 
   const subjectGender = String(data.subjectGender ?? "woman");
   if (!["woman", "man"].includes(subjectGender)) return "Invalid subject.";
   if ((payload.previousPrompt?.length ?? 0) > 6_000) return "Previous prompt is too long.";
-  const limitedTextFields = ["negativePrompt", "cameraMotion", "cameraMovement", "lighting", "visualStyle", "shotType", "motionPace", "revealStyle"];
+  const limitedTextFields = ["negativePrompt", "cameraMotion", "cameraMovement", "lighting", "visualStyle", "shotType", "motionPace", "revealStyle", "colorMode"];
   for (const field of limitedTextFields) {
     if (String(data[field] ?? "").length > 1_000) return `${field} is too long.`;
   }
@@ -219,26 +219,48 @@ function validateGeneratePayload(payload: GeneratePromptPayload): string | null 
   return null;
 }
 
-function revealStyleInstruction(toolType: string, revealStyle: string): string {
+function processStyleInstruction(toolType: string, processStyle: string): string {
   if (toolType === "tattoo_video") {
     const styles: Record<string, string> = {
-      botched_wipe_reveal: "Botched wipe reveal: the first 7 seconds look like a messy black ink failure, then a gloved hand wipes with green soap tissue to reveal the flawless hidden tattoo.",
-      scribble_illusion: "Scribble illusion: random chaotic tattoo lines look meaningless until the last 3 seconds, when a small zoom-out reveals they form the final artwork.",
-      second_skin_peel: "Second-skin peel reveal: smudged ink under clear protective film looks unreadable, then a gloved hand peels and wipes it clean to reveal the final tattoo.",
-      single_line_illusion: "Single-line illusion: overlapping loops seem random until the final zoom-out reveals a complete animal or portrait design.",
-      ink_blot_galaxy: "Ink blot reveal: thick black ink hides the tattoo until a wipe reveals a glowing, highly detailed design underneath.",
+      stencil_to_linework: "Stencil to linework: start with a clean stencil section, then show precise needle passes converting guide lines into permanent linework step by step.",
+      linework_to_shading: "Linework to shading: begin with clean linework and gradually add smooth shading, contrast, and depth without hiding the design.",
+      layered_detail_build: "Layered detail build: reveal the artwork through progressive detail passes such as outline, texture, micro-shading, highlights, and final cleanup.",
+      color_fill_process: "Color fill process: show controlled color packing or gradients building inside already-clean outlines, then finish with a wipe and polish pass.",
+      final_cleanup_polish: "Final cleanup polish: show the nearly finished tattoo being refined through small highlight, contrast, and cleanup passes before the final hero view.",
     };
-    return styles[revealStyle] ?? styles.botched_wipe_reveal;
+    return styles[processStyle] ?? styles.stencil_to_linework;
   }
 
   const styles: Record<string, string> = {
-    wet_polish_drop: "Wet polish drop reveal: messy thick polish drops look like a failed nail design, then a needle drag transforms them into perfect floral nail art.",
-    drag_marble_reveal: "Drag marble reveal: chaotic wet gel streaks are pulled into a clean marble pattern in one satisfying motion.",
-    cat_eye_magnet_pull: "Cat eye magnet reveal: scattered shimmer particles look uneven, then a magnet pull gathers them into a sharp glowing cat-eye line.",
-    messy_glitter_cleanup: "Messy glitter cleanup reveal: loose glitter and gel look chaotic, then a clean brush stroke reveals a precise sparkling design.",
-    blooming_gel_flower: "Blooming gel flower reveal: random color dots spread through wet gel and suddenly bloom into a detailed flower pattern.",
+    base_to_detail: "Base to detail: start with a clean base coat, then add controlled detail strokes, accents, and a glossy top coat step by step.",
+    line_art_build: "Line art build: show thin nail-art lines being drawn in a clear order so the design gradually becomes readable.",
+    layered_gel_design: "Layered gel design: build the nail through gel layers, curing shine, detail accents, and a clean final top coat.",
+    chrome_finish_pass: "Chrome finish pass: show a smooth base, chrome powder or gel being applied evenly, and a final glossy reflection pass.",
+    floral_detail_build: "Floral detail build: build petals, leaves, and tiny highlights one stage at a time on one nail.",
   };
-  return styles[revealStyle] ?? styles.wet_polish_drop;
+  return styles[processStyle] ?? styles.base_to_detail;
+}
+
+function colorModeInstruction(toolType: string, colorMode: string): string {
+  if (toolType === "tattoo_video") {
+    const modes: Record<string, string> = {
+      black_white: "Use black and white only, with crisp contrast and clean negative space.",
+      black_grey: "Use black and grey ink only, with smooth gradients and realistic shading.",
+      single_accent: "Use mostly black and grey with one restrained accent color chosen to support the design.",
+      full_color: "Use a controlled full-color tattoo palette with consistent colors from start to finish.",
+      artist_choice: "Choose a tasteful tattoo color palette that best fits the user's idea and style.",
+    };
+    return modes[colorMode] ?? modes.black_grey;
+  }
+
+  const modes: Record<string, string> = {
+    black_white: "Use black and white nail art only, with crisp graphic contrast.",
+    soft_pastel: "Use a soft pastel nail palette with gentle contrast and polished salon lighting.",
+    neon_accent: "Use a mostly clean palette with one vivid neon accent color.",
+    full_color: "Use a controlled full-color nail-art palette with consistent polish colors.",
+    artist_choice: "Choose a tasteful nail color palette that best fits the user's idea and nail style.",
+  };
+  return modes[colorMode] ?? modes.soft_pastel;
 }
 
 /** Extract user-provided key from custom header, never from env */
@@ -439,6 +461,10 @@ function validatePromptQuality(
     return { passed: false, reason: "generic_quality_stuffing" };
   }
 
+  if (/\b(botched|fail-looking|failed|failure|ugly|chaotic|random scribbles?|ink blotch?|black ink blob|huge mistake|ruined|messy blobs?)\b/i.test(generated)) {
+    return { passed: false, reason: "forbidden_fail_look_style" };
+  }
+
   // Check: trivial paraphrase (very high overlap)
   const sim = tokenSimilarity(original, generated);
   if (sim >= 0.85) {
@@ -515,8 +541,9 @@ function buildAiSystemInstruction(format: string, target: string): string {
     lines.push("");
     lines.push("For VIDEO prompts, include:");
     lines.push("- Initial curiosity hook that grabs attention in the first second");
-    lines.push("- A high-retention fake-failure setup: the first 60-70% should look messy, confusing, or like the nail art may have gone wrong");
-    lines.push("- A selected reveal style that physically transforms the messy setup into a beautiful final design");
+    lines.push("- A professional step-by-step creation process where the nail art is built visibly over time");
+    lines.push("- Do not make the opening look botched, ugly, failed, random, chaotic, or like a mistake");
+    lines.push("- Never show the full finished art in the first half; reveal it gradually through controlled strokes, layers, color passes, cleanup, and top-coat finishing");
     lines.push("- Time-based progression with clear pacing");
     lines.push("- Elegant adult hand model movement and satisfying nail-art process motion");
     lines.push("- Camera movement (coherent, non-contradictory)");
@@ -592,7 +619,8 @@ function buildAiUserInstruction(data: Record<string, unknown>, previousPrompt?: 
   const cameraMotion = String(data.cameraMotion ?? data.cameraMovement ?? "Slow pan");
   const lighting = String(data.lighting ?? "Golden hour");
   const visualStyle = String(data.visualStyle ?? "");
-  const revealStyle = String(data.revealStyle ?? "wet_polish_drop");
+  const processStyle = String(data.revealStyle ?? "base_to_detail");
+  const colorMode = String(data.colorMode ?? "soft_pastel");
   const shotType = String(data.shotType ?? "Single continuous shot");
   const motionPace = String(data.motionPace ?? "Balanced cinematic pacing");
   const target = String(data.targetGenerator ?? "Generic");
@@ -616,7 +644,8 @@ function buildAiUserInstruction(data: Record<string, unknown>, previousPrompt?: 
     lines.push(`Recommended pacing: ${timingPlan}`);
   }
   lines.push(`Camera/composition preference: ${cameraMotion}`);
-  lines.push(`Reveal style: ${revealStyleInstruction("nails_video", revealStyle)}`);
+  lines.push(`Process style: ${processStyleInstruction("nails_video", processStyle)}`);
+  lines.push(`Color mode: ${colorModeInstruction("nails_video", colorMode)}`);
   lines.push(`Shot design: ${shotType}`);
   lines.push(`Motion pace: ${motionPace}`);
   lines.push(`Lighting preference: ${lighting}`);
@@ -657,7 +686,8 @@ function buildAiRetryInstruction(
   userLines.push(`Rejection reason: ${reason}`);
   userLines.push("");
   userLines.push(`Core Idea: ${coreIdea}`);
-  userLines.push(`Reveal style: ${revealStyleInstruction("nails_video", String(data.revealStyle ?? "wet_polish_drop"))}`);
+  userLines.push(`Process style: ${processStyleInstruction("nails_video", String(data.revealStyle ?? "base_to_detail"))}`);
+  userLines.push(`Color mode: ${colorModeInstruction("nails_video", String(data.colorMode ?? "soft_pastel"))}`);
   userLines.push("Preserve the concept while SUBSTANTIALLY improving the production detail and wording.");
   userLines.push("The output must be meaningfully different from both the original Core Idea and any previous generation.");
   if (previousPrompt) {
@@ -697,6 +727,10 @@ function buildTattooSystemInstruction(): string {
   lines.push("The result should feel visually attractive and glamorous, not clinical or boring, while remaining tasteful and suitable for mainstream AI video generators.");
   lines.push("");
   lines.push("CINEMATIC STORY STRUCTURE (for a 10-second clip):");
+  lines.push("STYLE OVERRIDE: Do NOT create botched, ugly, fail-looking, chaotic scribble, black ink blob, hidden-art wipe, or sudden magic-reveal videos.");
+  lines.push("The tattoo must be created step by step as a premium professional art process: preparation, partial stencil or outline, linework, shading or color pass, final detail, then the complete finished-art hero view.");
+  lines.push("Never show the complete finished art in the first half. The viewer should see controlled progress, not a mistake or a mess.");
+  lines.push("If any later wording suggests a wipe reveal or hidden-art trick, reinterpret it as normal cleanup after visible step-by-step progress, not as the main concept.");
   lines.push("0.0-1.5s — IMMEDIATE CURIOSITY HOOK:");
   lines.push("Start with a visually striking partial view. Techniques include: extreme macro glimpse of one mysterious section of the stencil, a reflective highlight moving across the tattoo machine, a gloved hand temporarily concealing part of the design, a shallow-focus view of the adult subject's silhouette before focus moves to the placement, a wipe revealing only a tiny section of colored ink, or a controlled camera move that makes the viewer wonder what the complete design looks like.");
   lines.push("The first frame must contain movement or visual tension. Do NOT begin with a flat static view of an already completed tattoo.");
@@ -766,7 +800,8 @@ function buildTattooUserInstruction(
   const camera = String(data.cameraMovement ?? "Macro close-up");
   const lighting = String(data.lighting ?? "Studio rim lighting");
   const ratio = String(data.aspectRatio ?? "9:16");
-  const revealStyle = String(data.revealStyle ?? "botched_wipe_reveal");
+  const processStyle = String(data.revealStyle ?? "stencil_to_linework");
+  const colorMode = String(data.colorMode ?? "black_grey");
   const subjectGender = String(data.subjectGender ?? "woman") === "man"
     ? "adult man, age 21+"
     : "adult woman, age 21+";
@@ -782,7 +817,8 @@ function buildTattooUserInstruction(
   lines.push(`Ink style/color: ${inkStyle}`);
   lines.push(`Camera movement: ${camera}`);
   lines.push(`Lighting: ${lighting}`);
-  lines.push(`Reveal style: ${revealStyleInstruction("tattoo_video", revealStyle)}`);
+  lines.push(`Process style: ${processStyleInstruction("tattoo_video", processStyle)}`);
+  lines.push(`Color mode: ${colorModeInstruction("tattoo_video", colorMode)}`);
   lines.push(`Aspect ratio: ${ratio}`);
   lines.push(`Duration: 10 seconds (fixed)`);
   lines.push("Must avoid mistakes: cropped final artwork, covered final tattoo, wrong body part, underage wording, nudity, gore, repeated reveal structure, inconsistent tattoo design, and generic quality stuffing.");
@@ -824,9 +860,10 @@ function buildTattooRetryInstruction(
   userLines.push(`Lighting: ${String(data.lighting ?? "Studio rim lighting")}`);
   userLines.push(`Aspect ratio: ${String(data.aspectRatio ?? "9:16")}`);
   userLines.push("Duration: 10 seconds (fixed)");
-  userLines.push(`Reveal style: ${revealStyleInstruction("tattoo_video", String(data.revealStyle ?? "botched_wipe_reveal"))}`);
+  userLines.push(`Process style: ${processStyleInstruction("tattoo_video", String(data.revealStyle ?? "stencil_to_linework"))}`);
+  userLines.push(`Color mode: ${colorModeInstruction("tattoo_video", String(data.colorMode ?? "black_grey"))}`);
   userLines.push("");
-  userLines.push("Preserve the concept while SUBSTANTIALLY improving the cinematic detail, visual progression, and the final full-design reveal.");
+  userLines.push("Preserve the concept while SUBSTANTIALLY improving the cinematic detail, visible step-by-step art creation, and the final finished-art hero view.");
   if (previousPrompt) {
     userLines.push("");
     userLines.push("Previous generation to avoid duplicating:");
@@ -835,7 +872,7 @@ function buildTattooRetryInstruction(
     userLines.push("---");
   }
   userLines.push("");
-  userLines.push("The final two seconds MUST explicitly be a complete full-design hero reveal, not merely a 'detail reveal'.");
+  userLines.push("The final two seconds MUST explicitly be the first complete finished-art hero view, not merely a detail close-up.");
   userLines.push("Output the prompt text only.");
 
   return [
@@ -906,7 +943,10 @@ function buildSheetRecord(
       ? "Controlled cinematic pacing"
       : String(data.motionPace ?? "Balanced cinematic pacing"),
     lighting: String(data.lighting ?? ""),
-    visualStyle: String(data.revealStyle ?? data.visualStyle ?? ""),
+    visualStyle: [data.revealStyle, data.colorMode, data.visualStyle]
+      .map((value) => String(value ?? "").trim())
+      .filter(Boolean)
+      .join(" / "),
     tattooStyle: isTattoo ? String(data.tattooStyle ?? "Realistic") : "",
     bodyPart: isTattoo ? String(data.bodyPart ?? "") : "",
     inkStyle: isTattoo ? String(data.inkStyle ?? "Black ink") : "",
