@@ -32,9 +32,6 @@ import {
   validateKeyFormat,
 } from "../services/apiKeyStorage"
 import {
-  getGoogleSheetWebhookUrlDraft,
-} from "../services/googleSheetConfig"
-import {
   DialogActionTrigger,
   DialogBody,
   DialogCloseTrigger,
@@ -79,7 +76,6 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
   const [validationError, setValidationError] = useState<string | null>(null)
   const [testMessage, setTestMessage] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const sheetWebhookUrl = getGoogleSheetWebhookUrlDraft()
 
   // Load saved key on mount
   useEffect(() => {
@@ -394,15 +390,12 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
                     Google Sheet Sync
                   </Text>
                   <Text textStyle="xs" color="gray.600">
-                    Fixed destination. No changes needed here.
+                    Secure server connector is active.
                   </Text>
                 </Box>
               </HStack>
-              <Text textStyle="xs" color="gray.500" fontFamily="mono" css={{ wordBreak: "break-all" }}>
-                URL saved: {sheetWebhookUrl}
-              </Text>
               <Text textStyle="xs" color="gray.600" mt="2">
-                Sheet saving is handled through the secure server connector.
+                The private Sheet destination is hidden from the browser.
               </Text>
             </Box>
 

@@ -2,7 +2,7 @@ const URL_KEY = "magy8_sheet_webhook_url";
 const SECRET_KEY = "magy8_sheet_webhook_secret";
 
 export const DEFAULT_GOOGLE_SHEET_WEBHOOK_URL =
-  "https://script.google.com/macros/s/AKfycbwinGFeQcnjLvQWAvZNVpb9FBGA2IfacQEAzK3tJU8rCia2zeNivfEi9tMYP1LThAkY/exec";
+  "";
 
 export interface GoogleSheetConfig {
   webhookUrl: string;
