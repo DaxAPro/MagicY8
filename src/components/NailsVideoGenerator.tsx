@@ -85,11 +85,12 @@ const lightings = createListCollection({
 
 const processStyles = createListCollection({
   items: [
-    { label: "Base to Detail", value: "base_to_detail" },
-    { label: "Line Art Build", value: "line_art_build" },
-    { label: "Layered Gel Design", value: "layered_gel_design" },
-    { label: "Chrome Finish Pass", value: "chrome_finish_pass" },
-    { label: "Floral Detail Build", value: "floral_detail_build" },
+    { label: "Mystery Macro Build", value: "mystery_macro_build" },
+    { label: "Fragment to Final", value: "fragment_to_final" },
+    { label: "Fast Brush Assembly", value: "fast_brush_assembly" },
+    { label: "Base to Final", value: "base_to_final" },
+    { label: "Layer-by-Layer Color", value: "layer_by_layer_color" },
+    { label: "Final Pullback View", value: "final_pullback_view" },
   ],
 })
 
@@ -126,7 +127,7 @@ export function NailsVideoGenerator({
     nailColor: initialForm?.nailColor ?? "Pearl pink",
     cameraMovement: initialForm?.cameraMovement ?? "Macro push-in",
     lighting: initialForm?.lighting ?? "Soft beauty lighting",
-    revealStyle: initialForm?.revealStyle ?? "base_to_detail",
+    revealStyle: initialForm?.revealStyle ?? "mystery_macro_build",
     colorMode: initialForm?.colorMode ?? "soft_pastel",
   })
   const [output, setOutput] = useState("")
@@ -227,7 +228,7 @@ export function NailsVideoGenerator({
           <SelectField label="Color Palette" collection={nailColors} value={[form.nailColor]} onChange={([v]) => setField("nailColor", v ?? "Pearl pink")} accentColor="pink" />
           <SelectField label="Camera" collection={cameraMovements} value={[form.cameraMovement]} onChange={([v]) => setField("cameraMovement", v ?? "Macro push-in")} accentColor="pink" />
           <SelectField label="Lighting" collection={lightings} value={[form.lighting]} onChange={([v]) => setField("lighting", v ?? "Soft beauty lighting")} accentColor="pink" />
-          <SelectField label="Process Style" collection={processStyles} value={[form.revealStyle]} onChange={([v]) => setField("revealStyle", v ?? "base_to_detail")} accentColor="pink" />
+          <SelectField label="Video Style" collection={processStyles} value={[form.revealStyle]} onChange={([v]) => setField("revealStyle", v ?? "mystery_macro_build")} accentColor="pink" />
           <SelectField label="Color Mode" collection={colorModes} value={[form.colorMode]} onChange={([v]) => setField("colorMode", v ?? "soft_pastel")} accentColor="pink" />
         </Grid>
       </MotionBox>

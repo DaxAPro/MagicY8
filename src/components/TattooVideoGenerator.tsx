@@ -119,11 +119,12 @@ const lightings = createListCollection({
 
 const processStyles = createListCollection({
   items: [
-    { label: "Stencil to Linework", value: "stencil_to_linework" },
-    { label: "Linework to Shading", value: "linework_to_shading" },
-    { label: "Layered Detail Build", value: "layered_detail_build" },
-    { label: "Color Fill Process", value: "color_fill_process" },
-    { label: "Final Cleanup Polish", value: "final_cleanup_polish" },
+    { label: "Mystery Macro Build", value: "mystery_macro_build" },
+    { label: "Fragment to Final", value: "fragment_to_final" },
+    { label: "Fast Stroke Assembly", value: "fast_stroke_assembly" },
+    { label: "Stencil to Final", value: "stencil_to_final" },
+    { label: "Layer-by-Layer Color", value: "layer_by_layer_color" },
+    { label: "Final Pullback View", value: "final_pullback_view" },
   ],
 })
 
@@ -170,7 +171,7 @@ export function TattooVideoGenerator({
     lighting: initialForm?.lighting ?? "Studio rim lighting",
     aspectRatio: fixedVerticalAspectRatio,
     subjectGender: initialForm?.subjectGender ?? "woman",
-    revealStyle: initialForm?.revealStyle ?? "stencil_to_linework",
+    revealStyle: initialForm?.revealStyle ?? "mystery_macro_build",
     colorMode: initialForm?.colorMode ?? "black_grey",
   })
 
@@ -467,10 +468,10 @@ export function TattooVideoGenerator({
             accentColor="orange"
           />
           <SelectField
-            label="Process Style"
+            label="Video Style"
             collection={processStyles}
             value={[form.revealStyle]}
-            onChange={([v]) => setField("revealStyle", v ?? "stencil_to_linework")}
+            onChange={([v]) => setField("revealStyle", v ?? "mystery_macro_build")}
             accentColor="orange"
           />
           <SelectField

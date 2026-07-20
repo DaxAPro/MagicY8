@@ -222,23 +222,25 @@ function validateGeneratePayload(payload: GeneratePromptPayload): string | null 
 function processStyleInstruction(toolType: string, processStyle: string): string {
   if (toolType === "tattoo_video") {
     const styles: Record<string, string> = {
-      stencil_to_linework: "Stencil to linework: start with a clean stencil section, then show precise needle passes converting guide lines into permanent linework step by step.",
-      linework_to_shading: "Linework to shading: begin with clean linework and gradually add smooth shading, contrast, and depth without hiding the design.",
-      layered_detail_build: "Layered detail build: reveal the artwork through progressive detail passes such as outline, texture, micro-shading, highlights, and final cleanup.",
-      color_fill_process: "Color fill process: show controlled color packing or gradients building inside already-clean outlines, then finish with a wipe and polish pass.",
-      final_cleanup_polish: "Final cleanup polish: show the nearly finished tattoo being refined through small highlight, contrast, and cleanup passes before the final hero view.",
+      mystery_macro_build: "Mystery macro build: keep the first 60-70% in extreme macro fragments so the final tattoo subject cannot be identified; show curved line fragments, texture strokes, shading patches, ink caps, needle contact, and tool movement, then show the complete art only at the end.",
+      fragment_to_final: "Fragment to final: show disconnected but beautiful partial details forming rapidly section by section, without showing the full stencil or naming the subject visually until the final pullback.",
+      fast_stroke_assembly: "Fast stroke assembly: make the tattoo appear quickly like an image being generated live, but through realistic rapid needle passes, line strokes, shading passes, and highlight details.",
+      stencil_to_final: "Stencil to final: begin with only a tiny cropped stencil fragment, then convert it into ink step by step while hiding the overall composition until the last two seconds.",
+      layer_by_layer_color: "Layer-by-layer color: build color or black-grey values in controlled layers from tiny close-up fragments, keeping the whole image unreadable until the final hero view.",
+      final_pullback_view: "Final pullback view: stay tightly cropped on abstract details for most of the clip, then use one smooth final pullback to show the complete tattoo for the first time.",
     };
-    return styles[processStyle] ?? styles.stencil_to_linework;
+    return styles[processStyle] ?? styles.mystery_macro_build;
   }
 
   const styles: Record<string, string> = {
-    base_to_detail: "Base to detail: start with a clean base coat, then add controlled detail strokes, accents, and a glossy top coat step by step.",
-    line_art_build: "Line art build: show thin nail-art lines being drawn in a clear order so the design gradually becomes readable.",
-    layered_gel_design: "Layered gel design: build the nail through gel layers, curing shine, detail accents, and a clean final top coat.",
-    chrome_finish_pass: "Chrome finish pass: show a smooth base, chrome powder or gel being applied evenly, and a final glossy reflection pass.",
-    floral_detail_build: "Floral detail build: build petals, leaves, and tiny highlights one stage at a time on one nail.",
+    mystery_macro_build: "Mystery macro build: keep the first 60-70% in extreme macro fragments of one nail, showing tiny brush strokes, dots, gel layers, shimmer particles, and glossy tool movement so the final design cannot be guessed early.",
+    fragment_to_final: "Fragment to final: build disconnected beautiful nail-art fragments that only connect into the full design during the final pullback.",
+    fast_brush_assembly: "Fast brush assembly: make the nail art appear quickly like an image being generated live, but through realistic rapid brush strokes, dotting tools, gel passes, and top coat.",
+    base_to_final: "Base to final: begin with a clean base color, then add cropped partial details in stages while keeping the finished pattern unreadable until the last seconds.",
+    layer_by_layer_color: "Layer-by-layer color: build polish colors, highlights, glitter, chrome, or gel accents in controlled layers without showing the complete design too early.",
+    final_pullback_view: "Final pullback view: stay tightly cropped on abstract nail details for most of the clip, then pull back slightly to show the complete nail art for the first time.",
   };
-  return styles[processStyle] ?? styles.base_to_detail;
+  return styles[processStyle] ?? styles.mystery_macro_build;
 }
 
 function colorModeInstruction(toolType: string, colorMode: string): string {
@@ -461,8 +463,12 @@ function validatePromptQuality(
     return { passed: false, reason: "generic_quality_stuffing" };
   }
 
-  if (/\b(botched|fail-looking|failed|failure|ugly|chaotic|random scribbles?|ink blotch?|black ink blob|huge mistake|ruined|messy blobs?)\b/i.test(generated)) {
+  if (/\b(botched|fail-looking|failed|failure|ugly|chaotic|random scribbles?|ink blotch?|black ink blob|huge mistake|ruined|messy blobs?|wipe-off|wipe away|wipes away|hidden-art|one-step trick|magic reveal|sudden reveal)\b/i.test(generated)) {
     return { passed: false, reason: "forbidden_fail_look_style" };
+  }
+
+  if (/\b(full (lion|portrait|flower|butterfly|mandala|tattoo|nail) (is )?(visible|shown)|complete (design|art|artwork) (at|in) the (start|beginning|opening|first frame))\b/i.test(generated)) {
+    return { passed: false, reason: "finished_art_shown_too_early" };
   }
 
   // Check: trivial paraphrase (very high overlap)
@@ -496,7 +502,7 @@ function validatePromptQuality(
     const durNum = duration.replace(/[^0-9]/g, "");
     if (durNum) {
       // For video prompts, should reference timing/seconds
-      const hasTiming = /(?:\b\d+(?:\.\d+)?s\b|\bsecond|\bsec|timing|duration|final|hold|reveal)/i.test(generated);
+      const hasTiming = /(?:\b\d+(?:\.\d+)?s\b|\bsecond|\bsec|timing|duration|final|hold|hero view)/i.test(generated);
       if (!hasTiming) {
         return { passed: false, reason: "missing_video_timing" };
       }
@@ -543,7 +549,9 @@ function buildAiSystemInstruction(format: string, target: string): string {
     lines.push("- Initial curiosity hook that grabs attention in the first second");
     lines.push("- A professional step-by-step creation process where the nail art is built visibly over time");
     lines.push("- Do not make the opening look botched, ugly, failed, random, chaotic, or like a mistake");
-    lines.push("- Never show the full finished art in the first half; reveal it gradually through controlled strokes, layers, color passes, cleanup, and top-coat finishing");
+    lines.push("- Never show the full finished art in the first 60-70% of the clip; use extreme macro fragments so the final design cannot be guessed early");
+    lines.push("- Make the art appear quickly in satisfying visible steps, like an image being generated live, but through realistic nail tools and polish behavior");
+    lines.push("- Avoid AI-looking morphing, instant materialization, object melting, flickering, and unrealistic hand movement");
     lines.push("- Time-based progression with clear pacing");
     lines.push("- Elegant adult hand model movement and satisfying nail-art process motion");
     lines.push("- Camera movement (coherent, non-contradictory)");
@@ -552,7 +560,7 @@ function buildAiSystemInstruction(format: string, target: string): string {
     lines.push("- Believable physics, spatial continuity, and cause-and-effect between actions");
     lines.push("- Concrete lens/framing and depth-of-field choices without conflicting camera commands");
     lines.push("- A restrained color palette, material texture, atmosphere, and environmental reactions");
-    lines.push("- Clean final nail-style reveal and a held final hero frame");
+    lines.push("- Clean final nail-style hero view only after the design has been built through visible steps");
     lines.push("- Duration-aware pacing that matches the selected duration");
     lines.push("- Always state this is a 9:16 vertical video prompt");
     lines.push("Do NOT add motion timelines to still-image prompts.");
@@ -595,6 +603,7 @@ function buildAiSystemInstruction(format: string, target: string): string {
   lines.push("MISTAKE PREVENTION CHECKLIST:");
   lines.push("- No contradictory camera motion such as static locked-off plus fast orbit in the same shot");
   lines.push("- No impossible anatomy, melting objects, duplicated subjects, or changing object identity");
+  lines.push("- Extreme macro on one fingernail only; no full hands, extra fingers, missing fingers, fused fingers, duplicated nails, warped cuticles, or changing nail length/shape");
   lines.push("- No vague filler such as cinematic masterpiece, ultra-detailed, or best quality");
   lines.push("- No missing duration, missing 9:16 vertical format, or missing final payoff");
   lines.push("- No captions, watermarks, UI text, logos, or subtitles unless explicitly requested");
@@ -619,7 +628,7 @@ function buildAiUserInstruction(data: Record<string, unknown>, previousPrompt?: 
   const cameraMotion = String(data.cameraMotion ?? data.cameraMovement ?? "Slow pan");
   const lighting = String(data.lighting ?? "Golden hour");
   const visualStyle = String(data.visualStyle ?? "");
-  const processStyle = String(data.revealStyle ?? "base_to_detail");
+  const processStyle = String(data.revealStyle ?? "mystery_macro_build");
   const colorMode = String(data.colorMode ?? "soft_pastel");
   const shotType = String(data.shotType ?? "Single continuous shot");
   const motionPace = String(data.motionPace ?? "Balanced cinematic pacing");
@@ -646,6 +655,8 @@ function buildAiUserInstruction(data: Record<string, unknown>, previousPrompt?: 
   lines.push(`Camera/composition preference: ${cameraMotion}`);
   lines.push(`Process style: ${processStyleInstruction("nails_video", processStyle)}`);
   lines.push(`Color mode: ${colorModeInstruction("nails_video", colorMode)}`);
+  lines.push("Curiosity rule: do not let the viewer identify the final nail design in the opening. Show cropped macro fragments first, then connect them into the full design only in the final 1.5-2 seconds.");
+  lines.push("Anatomy rule: show one stable adult finger and one nail only; avoid full hands, extra fingers, warped nails, changing nail shape, and AI-looking morphs.");
   lines.push(`Shot design: ${shotType}`);
   lines.push(`Motion pace: ${motionPace}`);
   lines.push(`Lighting preference: ${lighting}`);
@@ -686,8 +697,9 @@ function buildAiRetryInstruction(
   userLines.push(`Rejection reason: ${reason}`);
   userLines.push("");
   userLines.push(`Core Idea: ${coreIdea}`);
-  userLines.push(`Process style: ${processStyleInstruction("nails_video", String(data.revealStyle ?? "base_to_detail"))}`);
+  userLines.push(`Process style: ${processStyleInstruction("nails_video", String(data.revealStyle ?? "mystery_macro_build"))}`);
   userLines.push(`Color mode: ${colorModeInstruction("nails_video", String(data.colorMode ?? "soft_pastel"))}`);
+  userLines.push("Do not show the complete nail art at the start. Use macro fragments, fast realistic brush/tool steps, then a final pullback.");
   userLines.push("Preserve the concept while SUBSTANTIALLY improving the production detail and wording.");
   userLines.push("The output must be meaningfully different from both the original Core Idea and any previous generation.");
   if (previousPrompt) {
@@ -722,21 +734,25 @@ function buildTattooSystemInstruction(): string {
   lines.push("- Natural skin texture and realistic anatomy");
   lines.push("- Tasteful sensual fashion-editorial presentation");
   lines.push("- Flattering but non-explicit wardrobe or professional draping");
+  lines.push("- Glamorous beauty-commercial lighting, confident elegant posture, polished styling, and premium studio atmosphere");
   lines.push("- No nudity, no exposed intimate areas, no pornographic or explicit sexual presentation");
   lines.push("Never use the words 'girl' or 'boy'. Always specify adult woman age 21+ or adult man age 21+, based on the selected subject.");
   lines.push("The result should feel visually attractive and glamorous, not clinical or boring, while remaining tasteful and suitable for mainstream AI video generators.");
   lines.push("");
   lines.push("CINEMATIC STORY STRUCTURE (for a 10-second clip):");
-  lines.push("STYLE OVERRIDE: Do NOT create botched, ugly, fail-looking, chaotic scribble, black ink blob, hidden-art wipe, or sudden magic-reveal videos.");
-  lines.push("The tattoo must be created step by step as a premium professional art process: preparation, partial stencil or outline, linework, shading or color pass, final detail, then the complete finished-art hero view.");
-  lines.push("Never show the complete finished art in the first half. The viewer should see controlled progress, not a mistake or a mess.");
-  lines.push("If any later wording suggests a wipe reveal or hidden-art trick, reinterpret it as normal cleanup after visible step-by-step progress, not as the main concept.");
+  lines.push("STYLE OVERRIDE: Do NOT create botched, ugly, fail-looking, chaotic scribble, black ink blob, wipe-off trick, one-step trick, or sudden magic appearance videos.");
+  lines.push("The tattoo must be created step by step as a premium professional art process: preparation, extreme macro fragments, partial stencil or cropped outline, rapid linework, shading or color pass, final detail, then the complete finished-art hero view.");
+  lines.push("Never show the complete finished art or full stencil in the first 60-70% of the clip. The viewer should see controlled progress and mystery, not a mistake or a mess.");
+  lines.push("Make the tattoo appear quickly in satisfying visible steps, like an image being generated live, but through realistic tattoo needle passes and normal ink behavior.");
+  lines.push("Keep the final subject impossible to identify until the final 2 seconds by using cropped macro fragments, partial curves, texture strokes, and shading details.");
+  lines.push("Avoid AI-looking morphing, instant materialization, flickering, melting skin, rubber anatomy, and changing body shape.");
+  lines.push("If any later wording suggests a wipe-off trick or one-step trick, reinterpret it as normal final polish after visible step-by-step progress, not as the main concept.");
   lines.push("0.0-1.5s — IMMEDIATE CURIOSITY HOOK:");
-  lines.push("Start with a visually striking partial view. Techniques include: extreme macro glimpse of one mysterious section of the stencil, a reflective highlight moving across the tattoo machine, a gloved hand temporarily concealing part of the design, a shallow-focus view of the adult subject's silhouette before focus moves to the placement, a wipe revealing only a tiny section of colored ink, or a controlled camera move that makes the viewer wonder what the complete design looks like.");
+  lines.push("Start with a visually striking partial view: extreme macro cropped line fragments, needle tip, ink cap, texture strokes, shading patches, or a tiny stencil section. Do not show enough of the artwork for the viewer to identify the final subject.");
   lines.push("The first frame must contain movement or visual tension. Do NOT begin with a flat static view of an already completed tattoo.");
   lines.push("");
-  lines.push("1.5-4.0s — ELEGANT PLACEMENT REVEAL:");
-  lines.push("Use a smooth camera glide, focus pull or small orbit to reveal the selected body area and establish the attractive adult model's silhouette.");
+  lines.push("1.5-4.0s - CROPPED BUILD PROGRESS:");
+  lines.push("Use a smooth camera glide, focus pull or small orbit across tiny cropped fragments of the selected body area while preserving mystery about the full design.");
   lines.push("The tattoo placement must remain anatomically correct.");
   lines.push("Use tasteful wardrobe or draping appropriate for the selected body part. Only the necessary tattoo area should be visible.");
   lines.push("");
@@ -745,39 +761,40 @@ function buildTattooSystemInstruction(): string {
   lines.push("Include: correct tattoo-machine contact, realistic gloved hands, a small amount of ink or stencil residue, shallow depth of field, controlled rack focus, subtle camera motion, consistent tattoo artwork, realistic skin response, and one or two visually meaningful machine passes.");
   lines.push("Do NOT let the artist's hand or machine hide the artwork for the majority of the clip.");
   lines.push("");
-  lines.push("7.2-8.0s — REVEAL TRANSITION:");
-  lines.push("The artist performs one clean wipe while the camera smoothly pulls back or changes focus.");
-  lines.push("The wipe must uncover the completed tattoo rather than repeatedly covering it.");
+  lines.push("7.2-8.0s - FINAL CONNECTING DETAILS:");
+  lines.push("The artist adds final connecting strokes, highlights, contrast, or a gentle final polish while the design remains visible.");
+  lines.push("The final polish must never act like a one-step trick; it only refines the already built tattoo.");
   lines.push("");
-  lines.push("8.0-10.0s — MANDATORY FULL-DESIGN HERO REVEAL (most important):");
-  lines.push("Make the final reveal feel hard to guess: use an unexpected reveal path such as reflection-to-skin match cut, ink wipe becoming negative space, camera orbit uncovering hidden symmetry, color bloom appearing only after the wipe, or a focus pull from a misleading detail into the complete design.");
+  lines.push("8.0-10.0s - MANDATORY FULL-DESIGN HERO VIEW (most important):");
+  lines.push("Make the final view satisfying because the previously abstract macro fragments finally connect into one complete readable tattoo.");
   lines.push("During the uninterrupted final two seconds, hold a clean, sharp and unobstructed hero shot of the complete finished tattoo design, fully inside the frame, with no hands, tools or cloth covering any portion of the artwork.");
   lines.push("Show the ENTIRE tattoo design, not one small detail. Every important edge of the tattoo must be inside the frame.");
   lines.push("The design must be sharp and fully readable. The selected body part and tattoo placement must be clearly visible.");
-  lines.push("No tattoo machine may remain in front of the design. No hand, wipe, clothing or object may cover the design. No new tattooing action may occur.");
+  lines.push("No tattoo machine may remain in front of the design. No hand, cloth, clothing or object may cover the design. No new tattooing action may occur.");
   lines.push("Do NOT cut away before the clip ends. Hold the final composition for the complete 2 seconds.");
   lines.push("Use a stable hero composition or extremely subtle micro push-in.");
   lines.push("Use flattering cinematic lighting on both the finished tattoo and the adult model's silhouette.");
   lines.push("Maintain consistent tattoo shape, colors and placement.");
   lines.push("The final frame must be suitable as a social-media thumbnail.");
   lines.push("");
-  lines.push("For any other duration, reserve the uninterrupted final 2.0 seconds for the complete full-design reveal.");
+  lines.push("For any other duration, reserve the uninterrupted final 2.0 seconds for the complete finished-art hero view.");
   lines.push("");
   lines.push("CAMERA CREATIVITY:");
-  lines.push("The selected camera style may start macro and gradually transition into a wider hero reveal.");
-  lines.push("Use coherent techniques: rack focus, slow slider movement, controlled arc or micro orbit, macro-to-medium pullback, foreground reveal, reflection reveal, parallax, or deliberate depth-of-field transition.");
+  lines.push("The selected camera style must start macro and gradually transition into a wider finished-art view.");
+  lines.push("Use coherent techniques: rack focus, slow slider movement, controlled arc or micro orbit, macro-to-medium pullback, parallax, or deliberate depth-of-field transition.");
   lines.push("Avoid random camera teleportation, uncontrolled handheld shaking, or contradictory camera instructions.");
   lines.push("One continuous choreographed shot is preferred, but it must contain visible progression and changing composition.");
   lines.push("");
   lines.push("NEGATIVE (must avoid):");
-  lines.push("Minor-looking subjects, deformed anatomy, warped torso or limbs, extra or missing fingers, duplicated hands, floating tattoo equipment, needle passing through the body, tattoo appearing on the wrong body area, tattoo changing shape color or placement, design suddenly appearing without a transition, melting skin, excessive blood, gore, nudity, explicit sexual content, fetish framing, camera remaining in one unchanging close-up, artist's hand covering the tattoo during the final reveal, cropped final artwork, blurry final reveal, text, subtitles, logos, watermarks, flickering, jumping anatomy, inconsistent lighting.");
+  lines.push("Minor-looking subjects, deformed anatomy, warped torso or limbs, full-body framing, extra or missing fingers, duplicated hands, floating tattoo equipment, needle passing through the body, tattoo appearing on the wrong body area, tattoo changing shape color or placement, full tattoo visible at the start, design suddenly appearing without visible tool steps, AI-looking morphing, melting skin, excessive blood, gore, nudity, explicit sexual content, fetish framing, camera remaining in one unchanging close-up, artist's hand covering the tattoo during the final view, cropped final artwork, blurry final view, text, subtitles, logos, watermarks, flickering, jumping anatomy, inconsistent lighting.");
   lines.push("");
   lines.push("MISTAKE PREVENTION CHECKLIST:");
   lines.push("- Never crop, blur, cover, or hide the final tattoo during the final two seconds");
   lines.push("- Never move the tattoo to a different body part or change its shape/color midway");
   lines.push("- Never describe a minor-looking person, girl, boy, teenager, or school-age subject");
+  lines.push("- Use tight macro framing on the selected tattoo area only; no full body, no warped limbs, no duplicated body parts, and no unnecessary visible fingers");
   lines.push("- Never use random jump cuts, impossible needle contact, duplicated hands, or floating tools");
-  lines.push("- Never repeat the same opening hook/reveal path when a previous prompt is provided");
+  lines.push("- Never repeat the same macro fragment sequence, build rhythm, camera path, or final pullback when a previous prompt is provided");
   lines.push("- Always keep the clip 9:16 vertical, exactly 10 seconds, and one coherent cinematic sequence");
   lines.push("");
   lines.push("OUTPUT CONTRACT:");
@@ -800,7 +817,7 @@ function buildTattooUserInstruction(
   const camera = String(data.cameraMovement ?? "Macro close-up");
   const lighting = String(data.lighting ?? "Studio rim lighting");
   const ratio = String(data.aspectRatio ?? "9:16");
-  const processStyle = String(data.revealStyle ?? "stencil_to_linework");
+  const processStyle = String(data.revealStyle ?? "mystery_macro_build");
   const colorMode = String(data.colorMode ?? "black_grey");
   const subjectGender = String(data.subjectGender ?? "woman") === "man"
     ? "adult man, age 21+"
@@ -819,12 +836,15 @@ function buildTattooUserInstruction(
   lines.push(`Lighting: ${lighting}`);
   lines.push(`Process style: ${processStyleInstruction("tattoo_video", processStyle)}`);
   lines.push(`Color mode: ${colorModeInstruction("tattoo_video", colorMode)}`);
+  lines.push("Curiosity rule: do not let the viewer identify the final tattoo subject in the opening. Show only tight macro fragments first, then connect them into the complete design only in the final 2 seconds.");
+  lines.push("Attractive safe styling: describe a glamorous attractive adult subject age 21+ with tasteful wardrobe and beauty-commercial lighting, but keep framing focused on the tattoo area and non-explicit.");
+  lines.push("Anatomy rule: show one selected body part in a stable pose; avoid full body, warped limbs, duplicated hands, extra fingers, rubber skin, and AI-looking morphs.");
   lines.push(`Aspect ratio: ${ratio}`);
   lines.push(`Duration: 10 seconds (fixed)`);
-  lines.push("Must avoid mistakes: cropped final artwork, covered final tattoo, wrong body part, underage wording, nudity, gore, repeated reveal structure, inconsistent tattoo design, and generic quality stuffing.");
+  lines.push("Must avoid mistakes: cropped final artwork, covered final tattoo, wrong body part, underage wording, nudity, gore, repeated video structure, inconsistent tattoo design, and generic quality stuffing.");
   if (variationSeed) {
     lines.push(`Variation seed: ${variationSeed}`);
-    lines.push("Use the seed only to choose a fresh opening hook, camera path, reveal technique, and final payoff. Do not include the seed in the final prompt.");
+    lines.push("Use the seed only to choose a fresh macro fragment sequence, camera path, build rhythm, lighting behavior, and final payoff. Do not include the seed in the final prompt.");
   }
 
   if (previousPrompt) {
@@ -833,11 +853,11 @@ function buildTattooUserInstruction(
     lines.push("---");
     lines.push(previousPrompt);
     lines.push("---");
-    lines.push("Produce a GENUINELY DIFFERENT creative variation. Change meaningful creative decisions such as the opening hook, camera path, reveal technique, or lighting behavior. Do NOT repeat the previous prompt or make only minor word changes. Preserve the same core concept and constraints.");
+    lines.push("Produce a GENUINELY DIFFERENT creative variation. Change meaningful creative decisions such as macro fragment order, build rhythm, camera path, lighting behavior, body-part framing, or final pullback. Do NOT repeat the previous prompt or make only minor word changes. Preserve the same core concept and constraints.");
   }
 
   lines.push("");
-  lines.push("Follow the cinematic story structure exactly. The final two seconds MUST be a complete full-design hero reveal, reached through a reveal path the viewer cannot easily guess at the beginning.");
+  lines.push("Follow the cinematic story structure exactly. The final two seconds MUST be the first complete finished-art hero view, reached after macro fragments and visible tool-driven build steps the viewer cannot easily identify at the beginning.");
   lines.push("Output the prompt text only.");
   return lines.join("\n");
 }
@@ -860,8 +880,9 @@ function buildTattooRetryInstruction(
   userLines.push(`Lighting: ${String(data.lighting ?? "Studio rim lighting")}`);
   userLines.push(`Aspect ratio: ${String(data.aspectRatio ?? "9:16")}`);
   userLines.push("Duration: 10 seconds (fixed)");
-  userLines.push(`Process style: ${processStyleInstruction("tattoo_video", String(data.revealStyle ?? "stencil_to_linework"))}`);
+  userLines.push(`Process style: ${processStyleInstruction("tattoo_video", String(data.revealStyle ?? "mystery_macro_build"))}`);
   userLines.push(`Color mode: ${colorModeInstruction("tattoo_video", String(data.colorMode ?? "black_grey"))}`);
+  userLines.push("Do not show the complete tattoo or full stencil at the start. Use macro fragments, fast realistic needle/tool steps, then a final pullback.");
   userLines.push("");
   userLines.push("Preserve the concept while SUBSTANTIALLY improving the cinematic detail, visible step-by-step art creation, and the final finished-art hero view.");
   if (previousPrompt) {
