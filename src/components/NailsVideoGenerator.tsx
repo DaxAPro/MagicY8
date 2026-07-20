@@ -17,7 +17,6 @@ import { LuSparkles, LuWandSparkles } from "react-icons/lu"
 import { generatePrompt, GeminiError } from "../services/geminiApi"
 import { getApiKey } from "../services/apiKeyStorage"
 import { addPendingRecord } from "../services/sheetRetryQueue"
-import { savePromptDirectToGoogleSheets } from "../services/directGoogleSheets"
 import type { HistoryEntry, NailsVideoFormState, SheetStatus } from "../types"
 import { PromptOutput } from "./PromptOutput"
 import { SelectField } from "./formControls"
@@ -150,22 +149,6 @@ export function NailsVideoGenerator({
     try {
       const requestData = { ...form, videoRatio: "9:16", variationSeed: crypto.randomUUID() }
       const result = await generatePrompt("nails_video", requestData, apiKey, lastPromptRef.current)
-      if (!result.sheetSaved) {
-        const sheet = await savePromptDirectToGoogleSheets({
-          generationId: result.generationId,
-          toolType: "nails_video",
-          coreIdea: form.coreIdea,
-          finalPrompt: result.prompt,
-          model: result.model,
-          duration: form.duration,
-          nailStyle: form.nailStyle,
-          nailShape: form.nailShape,
-          nailColor: form.nailColor,
-          revealStyle: form.revealStyle,
-        })
-        result.sheetSaved = sheet.saved
-        result.sheetError = sheet.saved ? undefined : sheet.error ?? result.sheetError
-      }
       setOutput(result.prompt)
       setGenerationId(result.generationId)
       setSheetStatus(result.sheetSaved ? "saved" : result.sheetError ? "failed" : "pending")

@@ -18,7 +18,6 @@ import { LuPenTool, LuVideo } from "react-icons/lu"
 import { generatePrompt, GeminiError } from "../services/geminiApi"
 import { getApiKey } from "../services/apiKeyStorage"
 import { addPendingRecord } from "../services/sheetRetryQueue"
-import { savePromptDirectToGoogleSheets } from "../services/directGoogleSheets"
 import type { HistoryEntry, SheetStatus, TattooVideoFormState } from "../types"
 import { PromptOutput } from "./PromptOutput"
 import { SelectField } from "./formControls"
@@ -221,25 +220,8 @@ export function TattooVideoGenerator({
           bodyPartDescription,
           variationSeed: crypto.randomUUID(),
         }, apiKey, lastPromptRef.current)
-      let finalSheetSaved = sheetSaved
-      let finalSheetError = sheetErr
-      if (!finalSheetSaved) {
-        const sheet = await savePromptDirectToGoogleSheets({
-          generationId: genId,
-          toolType: "tattoo_video",
-          coreIdea: form.coreIdea,
-          finalPrompt: prompt,
-          model,
-          duration: "10s",
-          tattooStyle: form.tattooStyle,
-          bodyPart: form.bodyPart,
-          inkStyle: form.inkStyle,
-          subjectGender: form.subjectGender,
-          revealStyle: form.revealStyle,
-        })
-        finalSheetSaved = sheet.saved
-        finalSheetError = sheet.saved ? undefined : sheet.error ?? sheetErr
-      }
+      const finalSheetSaved = sheetSaved
+      const finalSheetError = sheetErr
       setOutput(prompt)
       onModelUsed?.(model)
       setGenerationId(genId)

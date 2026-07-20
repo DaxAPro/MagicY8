@@ -32,11 +32,7 @@ import {
   validateKeyFormat,
 } from "../services/apiKeyStorage"
 import {
-  getGoogleSheetConfig,
   getGoogleSheetWebhookUrlDraft,
-  maskSecret,
-  removeGoogleSheetConfig,
-  saveGoogleSheetConfig,
 } from "../services/googleSheetConfig"
 import {
   DialogActionTrigger,
@@ -82,12 +78,8 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
   const [savedKey, setSavedKey] = useState<string | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [testMessage, setTestMessage] = useState<string | null>(null)
-  const [sheetUrlInput, setSheetUrlInput] = useState(getGoogleSheetWebhookUrlDraft)
-  const [sheetSecretInput, setSheetSecretInput] = useState("")
-  const [savedSheetConfig, setSavedSheetConfig] = useState<ReturnType<typeof getGoogleSheetConfig>>(null)
-  const [editingSheetConfig, setEditingSheetConfig] = useState(false)
-  const [sheetMessage, setSheetMessage] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const sheetWebhookUrl = getGoogleSheetWebhookUrlDraft()
 
   // Load saved key on mount
   useEffect(() => {
@@ -95,9 +87,6 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
     requestAnimationFrame(() => {
       setSavedKey(k)
       if (k) setConnState("key_saved")
-      const sheetConfig = getGoogleSheetConfig()
-      setSavedSheetConfig(sheetConfig)
-      setSheetUrlInput(sheetConfig?.webhookUrl ?? getGoogleSheetWebhookUrlDraft())
     })
   }, [])
 
@@ -145,41 +134,6 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
     notifyKeyChange(false)
   }
 
-  const handleSaveSheet = () => {
-    const webhookUrl = sheetUrlInput.trim()
-    const webhookSecret = sheetSecretInput.trim()
-    if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/(?:exec|dev)$/i.test(webhookUrl)) {
-      setSheetMessage("Paste the Google Apps Script Web App /exec or /dev URL.")
-      return
-    }
-    if (webhookSecret.length < 16) {
-      setSheetMessage("Use a Sheet secret with at least 16 characters.")
-      return
-    }
-    saveGoogleSheetConfig({ webhookUrl, webhookSecret })
-    setSavedSheetConfig({ webhookUrl, webhookSecret })
-    setEditingSheetConfig(false)
-    setSheetUrlInput(webhookUrl)
-    setSheetSecretInput("")
-    setSheetMessage("Google Sheet sync saved permanently in this browser.")
-  }
-
-  const handleChangeSheet = () => {
-    setEditingSheetConfig(true)
-    setSheetUrlInput(savedSheetConfig?.webhookUrl ?? getGoogleSheetWebhookUrlDraft())
-    setSheetSecretInput("")
-    setSheetMessage("Edit the URL or secret, then click Save Sheet Sync.")
-  }
-
-  const handleRemoveSheet = () => {
-    removeGoogleSheetConfig()
-    setSavedSheetConfig(null)
-    setEditingSheetConfig(false)
-    setSheetUrlInput(getGoogleSheetWebhookUrlDraft())
-    setSheetSecretInput("")
-    setSheetMessage("Google Sheet sync removed.")
-  }
-
   const handleTest = async () => {
     const keyToTest = savedKey ?? keyInput.trim()
     if (!keyToTest) {
@@ -214,7 +168,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
       const msg = err instanceof Error ? err.message : "Connection failed."
       if (err instanceof GeminiError && err.code === "configuration") {
         setConnState("setup_missing")
-        setTestMessage("API key saved. Direct Groq mode is ready. Google Sheets live sync needs a secure server connector.")
+        setTestMessage(msg)
       } else if (msg.includes("invalid") || msg.includes("revoked") || msg.includes("401") || err && typeof err === 'object' && 'code' in err && (err as {code?: string}).code === "invalid_key") {
         setConnState("invalid_key")
       } else if (msg.includes("rate limit") || msg.includes("429") || err && typeof err === 'object' && 'code' in err && (err as {code?: string}).code === "rate_limit") {
@@ -440,68 +394,16 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
                     Google Sheet Sync
                   </Text>
                   <Text textStyle="xs" color="gray.600">
-                    Saved in this browser until you remove or change it.
+                    Fixed destination. No changes needed here.
                   </Text>
                 </Box>
-                {savedSheetConfig && !editingSheetConfig && (
-                  <HStack gap="1">
-                    <Button
-                      size="xs"
-                      variant="ghost"
-                      onClick={handleChangeSheet}
-                      css={{ color: "green.200", _hover: { background: "rgba(34,197,94,0.1)" } }}
-                    >
-                      Change
-                    </Button>
-                    <Button
-                      size="xs"
-                      variant="ghost"
-                      onClick={handleRemoveSheet}
-                      css={{ color: "red.300", _hover: { background: "rgba(239,68,68,0.1)" } }}
-                    >
-                      Remove
-                    </Button>
-                  </HStack>
-                )}
               </HStack>
-              {savedSheetConfig && !editingSheetConfig ? (
-                <VStack gap="1" align="stretch">
-                  <Text textStyle="xs" color="gray.500" fontFamily="mono" css={{ wordBreak: "break-all" }}>
-                    URL saved: {savedSheetConfig.webhookUrl}
-                  </Text>
-                  <Text textStyle="xs" color="gray.500" fontFamily="mono">
-                    Secret: {maskSecret(savedSheetConfig.webhookSecret)}
-                  </Text>
-                </VStack>
-              ) : (
-                <VStack gap="2" align="stretch">
-                  <Input
-                    placeholder="https://script.google.com/macros/s/.../exec or /dev"
-                    value={sheetUrlInput}
-                    onChange={(e) => setSheetUrlInput(e.target.value)}
-                    css={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(34,197,94,0.2)", color: "gray.200", fontSize: "0.78rem" }}
-                  />
-                  <Input
-                    type="password"
-                    placeholder="MAGICY8_WEBHOOK_SECRET"
-                    value={sheetSecretInput}
-                    onChange={(e) => setSheetSecretInput(e.target.value)}
-                    css={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(34,197,94,0.2)", color: "gray.200", fontSize: "0.78rem" }}
-                  />
-                  <Button
-                    size="sm"
-                    onClick={handleSaveSheet}
-                    css={{ background: "rgba(34,197,94,0.16)", color: "green.200", borderRadius: "lg", _hover: { background: "rgba(34,197,94,0.22)" } }}
-                  >
-                    Save Sheet Sync
-                  </Button>
-                </VStack>
-              )}
-              {sheetMessage && (
-                <Text textStyle="xs" color={savedSheetConfig ? "green.300" : "yellow.300"} mt="2">
-                  {sheetMessage}
-                </Text>
-              )}
+              <Text textStyle="xs" color="gray.500" fontFamily="mono" css={{ wordBreak: "break-all" }}>
+                URL saved: {sheetWebhookUrl}
+              </Text>
+              <Text textStyle="xs" color="gray.600" mt="2">
+                Sheet saving is handled through the secure server connector.
+              </Text>
             </Box>
 
             {/* Security notice */}
