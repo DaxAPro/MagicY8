@@ -15,7 +15,7 @@ import {
 import { motion } from "framer-motion"
 import { useCallback, useRef, useState } from "react"
 import { LuPenTool, LuVideo } from "react-icons/lu"
-import { generatePrompt, GeminiError } from "../services/geminiApi"
+import { generateLocalPrompt, generatePrompt, GeminiError } from "../services/geminiApi"
 import { getApiKey } from "../services/apiKeyStorage"
 import { addPendingRecord } from "../services/sheetRetryQueue"
 import type { HistoryEntry, SheetStatus, TattooVideoFormState } from "../types"
@@ -159,7 +159,6 @@ export function TattooVideoGenerator({
   onPromptGenerated,
   onGeneratingChange,
   onModelUsed,
-  onRequireApiKey,
   initialForm,
 }: TattooVideoGeneratorProps) {
   const [form, setForm] = useState<TattooVideoFormState>({
@@ -196,13 +195,6 @@ export function TattooVideoGenerator({
     if (!form.coreIdea.trim()) return
     if (generatingRef.current) return
 
-    const apiKey = getApiKey()
-    if (!apiKey) {
-      setError("Add your Groq API key in API Settings.")
-      onRequireApiKey?.()
-      return
-    }
-
     generatingRef.current = true
     setLoading(true)
     setOutput("")
@@ -216,6 +208,22 @@ export function TattooVideoGenerator({
       const bodyPartDescription =
         BODY_PART_DESCRIPTIONS[form.bodyPart] ?? "the outer forearm"
 
+      const requestData = {
+        ...form,
+        aspectRatio: fixedVerticalAspectRatio,
+        bodyPartLabel,
+        bodyPartDescription,
+        variationSeed: crypto.randomUUID(),
+      }
+      const apiKey = getApiKey()
+      const result = apiKey
+        ? await generatePrompt("tattoo_video", requestData, apiKey, lastPromptRef.current).catch(async (err) => {
+          if (err instanceof GeminiError && ["rate_limit", "invalid_key", "model_unavailable"].includes(err.code ?? "")) {
+            return generateLocalPrompt("tattoo_video", requestData, lastPromptRef.current)
+          }
+          throw err
+        })
+        : await generateLocalPrompt("tattoo_video", requestData, lastPromptRef.current)
       const {
         prompt,
         model,
@@ -224,14 +232,7 @@ export function TattooVideoGenerator({
         sheetSaved,
         sheetError: sheetErr,
         syncToken,
-      } =
-        await generatePrompt("tattoo_video", {
-          ...form,
-          aspectRatio: fixedVerticalAspectRatio,
-          bodyPartLabel,
-          bodyPartDescription,
-          variationSeed: crypto.randomUUID(),
-        }, apiKey, lastPromptRef.current)
+      } = result
       const finalSheetSaved = sheetSaved
       const finalSheetError = sheetErr
       setOutput(prompt)
@@ -243,11 +244,11 @@ export function TattooVideoGenerator({
         setSheetStatus("saved")
       } else if (finalSheetError) {
         setSheetStatus("failed")
-        if (genId && !genId.startsWith("local_")) {
+        if (genId && syncToken && !genId.startsWith("local_")) {
           addPendingRecord({
             generationId: genId,
             toolType: "tattoo_video",
-            formData: { ...form, aspectRatio: fixedVerticalAspectRatio, bodyPartLabel, bodyPartDescription } as Record<string, unknown>,
+            formData: requestData,
             finalPrompt: prompt,
             modelUsed: model,
             fallbackUsed: fallbackUsed ?? false,
@@ -561,7 +562,7 @@ export function TattooVideoGenerator({
             w="full"
             size="xl"
             loading={loading}
-            loadingText="Groq is crafting your tattoo video prompt..."
+            loadingText="Creating your tattoo video prompt..."
             onClick={handleGenerate}
             disabled={!form.coreIdea.trim() || loading}
             css={{
@@ -616,7 +617,7 @@ export function TattooVideoGenerator({
         onCopy={handleCopy}
         accentColor="orange"
         title="Tattoo Video Prompt"
-        loadingText="Groq is crafting your tattoo video prompt..."
+        loadingText="Creating your tattoo video prompt..."
         tags={["10s", "One Continuous Shot", "Professional Studio"]}
         sheetStatus={sheetStatus}
         generationId={generationId}

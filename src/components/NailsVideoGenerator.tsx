@@ -14,7 +14,7 @@ import {
 import { motion } from "framer-motion"
 import { useCallback, useRef, useState } from "react"
 import { LuSparkles, LuWandSparkles } from "react-icons/lu"
-import { generatePrompt, GeminiError } from "../services/geminiApi"
+import { generateLocalPrompt, generatePrompt, GeminiError } from "../services/geminiApi"
 import { getApiKey } from "../services/apiKeyStorage"
 import { addPendingRecord } from "../services/sheetRetryQueue"
 import type { HistoryEntry, NailsVideoFormState, SheetStatus } from "../types"
@@ -116,7 +116,6 @@ export function NailsVideoGenerator({
   onPromptGenerated,
   onGeneratingChange,
   onModelUsed,
-  onRequireApiKey,
   initialForm,
 }: NailsVideoGeneratorProps) {
   const [form, setForm] = useState<NailsVideoFormState>({
@@ -147,12 +146,6 @@ export function NailsVideoGenerator({
 
   const handleGenerate = async () => {
     if (!form.coreIdea.trim() || generatingRef.current) return
-    const apiKey = getApiKey()
-    if (!apiKey) {
-      setError("Add your Groq API key in API Settings.")
-      onRequireApiKey?.()
-      return
-    }
     generatingRef.current = true
     setLoading(true)
     setError("")
@@ -160,13 +153,21 @@ export function NailsVideoGenerator({
     onGeneratingChange?.(true)
     try {
       const requestData = { ...form, videoRatio: "9:16", variationSeed: crypto.randomUUID() }
-      const result = await generatePrompt("nails_video", requestData, apiKey, lastPromptRef.current)
+      const apiKey = getApiKey()
+      const result = apiKey
+        ? await generatePrompt("nails_video", requestData, apiKey, lastPromptRef.current).catch(async (err) => {
+          if (err instanceof GeminiError && ["rate_limit", "invalid_key", "model_unavailable"].includes(err.code ?? "")) {
+            return generateLocalPrompt("nails_video", requestData, lastPromptRef.current)
+          }
+          throw err
+        })
+        : await generateLocalPrompt("nails_video", requestData, lastPromptRef.current)
       setOutput(result.prompt)
       setGenerationId(result.generationId)
       setSheetStatus(result.sheetSaved ? "saved" : result.sheetError ? "failed" : "pending")
       onModelUsed?.(result.model)
       lastPromptRef.current = result.prompt
-      if (result.sheetError && result.generationId && !result.generationId.startsWith("local_")) {
+      if (result.sheetError && result.generationId && result.syncToken && !result.generationId.startsWith("local_")) {
         addPendingRecord({
           generationId: result.generationId,
           toolType: "nails_video",
@@ -238,11 +239,11 @@ export function NailsVideoGenerator({
         <Textarea placeholder="e.g. pink chrome French tip nails, art builds fast step by step, final design only at the end" value={form.coreIdea} onChange={(e) => setField("coreIdea", e.target.value)} rows={3} resize="none" css={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(236,72,153,0.3)", color: "white", _focus: { borderColor: "#ec4899", boxShadow: glowPink } }} />
       </MotionBox>
 
-      <Button w="full" size="xl" loading={loading} loadingText="Groq is crafting your nails video prompt..." onClick={handleGenerate} disabled={!form.coreIdea.trim() || loading} css={{ background: "linear-gradient(135deg, #db2777 0%, #7c3aed 55%, #0891b2 100%)", color: "white", fontWeight: "bold", minH: "56px", boxShadow: !loading ? glowPink : "none" }}>
+      <Button w="full" size="xl" loading={loading} loadingText="Creating your nails video prompt..." onClick={handleGenerate} disabled={!form.coreIdea.trim() || loading} css={{ background: "linear-gradient(135deg, #db2777 0%, #7c3aed 55%, #0891b2 100%)", color: "white", fontWeight: "bold", minH: "56px", boxShadow: !loading ? glowPink : "none" }}>
         {!loading && <HStack gap="2.5"><Icon fontSize="xl"><LuWandSparkles /></Icon><Text>Generate Nails Video Prompt / නිය prompt හදන්න</Text><Icon fontSize="xl"><LuSparkles /></Icon></HStack>}
       </Button>
 
-      <PromptOutput output={output} loading={loading} error={error} copied={copied} onCopy={handleCopy} accentColor="pink" title="Nails Style Video Prompt" loadingText="Groq is crafting your nails video prompt..." tags={["9:16", form.duration, "Nails Style"]} sheetStatus={sheetStatus} generationId={generationId} />
+      <PromptOutput output={output} loading={loading} error={error} copied={copied} onCopy={handleCopy} accentColor="pink" title="Nails Style Video Prompt" loadingText="Creating your nails video prompt..." tags={["9:16", form.duration, "Nails Style"]} sheetStatus={sheetStatus} generationId={generationId} />
     </VStack>
   )
 }

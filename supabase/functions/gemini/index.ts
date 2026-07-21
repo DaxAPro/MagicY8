@@ -54,10 +54,17 @@ type TrendIdea = {
   source?: { name?: string; uri?: string };
 };
 
-type Action = "generate_prompt" | "get_trends" | "health_check" | "retry_sheet_save";
+type Action = "generate_prompt" | "generate_local_prompt" | "get_trends" | "health_check" | "retry_sheet_save";
 
 type GeneratePromptPayload = {
   action: "generate_prompt";
+  toolType: "nails_video" | "tattoo_video";
+  formData: Record<string, unknown>;
+  previousPrompt?: string;
+};
+
+type GenerateLocalPromptPayload = {
+  action: "generate_local_prompt";
   toolType: "nails_video" | "tattoo_video";
   formData: Record<string, unknown>;
   previousPrompt?: string;
@@ -83,6 +90,7 @@ type RetrySheetSavePayload = {
 
 type Payload =
   | GeneratePromptPayload
+  | GenerateLocalPromptPayload
   | GetTrendsPayload
   | HealthCheckPayload
   | RetrySheetSavePayload;
@@ -1010,35 +1018,15 @@ async function saveToGoogleSheets(record: SheetRecord): Promise<SheetSaveResult>
   });
 
   try {
-    // Apps Script works best with text/plain to avoid preflight redirects
-    let res: Response | null = null;
-    let redirectUrl: string | null = GOOGLE_SHEETS_WEBHOOK_URL;
-    const maxRedirects = 5;
-
-    for (let i = 0; i < maxRedirects && redirectUrl; i++) {
-      res = await fetch(redirectUrl, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body,
-        redirect: "manual",
-        signal: AbortSignal.timeout(SHEETS_TIMEOUT_MS),
-      });
-
-      // Handle redirect (Apps Script returns 302)
-      if (res.status >= 300 && res.status < 400) {
-        const location = res.headers.get("location");
-        if (location) {
-          redirectUrl = location;
-          continue;
-        }
-        break;
-      }
-      break;
-    }
-
-    if (!res) {
-      return { sheetSaved: false, sheetError: "No response from Sheets endpoint" };
-    }
+    // Apps Script /exec URLs redirect internally. Let fetch follow that redirect
+    // so the original doPost execution can return its final JSON response.
+    const res = await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body,
+      redirect: "follow",
+      signal: AbortSignal.timeout(SHEETS_TIMEOUT_MS),
+    });
 
     if (!res.ok) {
       return {
@@ -1095,6 +1083,121 @@ async function saveToGoogleSheets(record: SheetRecord): Promise<SheetSaveResult>
     });
     return { sheetSaved: false, sheetError: msg };
   }
+}
+
+async function fetchRecentSheetPrompts(): Promise<string[]> {
+  if (!GOOGLE_SHEETS_WEBHOOK_URL) return [];
+  try {
+    const res = await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+      method: "GET",
+      redirect: "follow",
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return [];
+    const parsed = await res.json().catch(() => null) as { prompts?: unknown } | null;
+    if (!parsed || !Array.isArray(parsed.prompts)) return [];
+    return parsed.prompts
+      .map((item) => String(item ?? "").trim())
+      .filter(Boolean)
+      .slice(-8);
+  } catch {
+    return [];
+  }
+}
+
+function chooseLocalVariant(seedText: string, recentPrompts: string[], previousPrompt?: string): number {
+  const combined = [seedText, previousPrompt ?? "", ...recentPrompts].join(" ");
+  let score = 0;
+  for (let i = 0; i < combined.length; i++) score = (score + combined.charCodeAt(i) * (i + 3)) % 997;
+  const recentText = recentPrompts.join(" ").toLowerCase();
+  const markers = ["macro fragments", "brush assembly", "layered color", "parallax pullback", "rack focus", "texture close-up"];
+  for (let offset = 0; offset < markers.length; offset++) {
+    const candidate = (score + offset) % markers.length;
+    if (!recentText.includes(markers[candidate])) return candidate;
+  }
+  return score % markers.length;
+}
+
+function buildLocalNailsPrompt(data: Record<string, unknown>, recentPrompts: string[], previousPrompt?: string): string {
+  const coreIdea = String(data.coreIdea ?? "").trim();
+  const duration = String(data.duration ?? "8s");
+  const nailStyle = String(data.nailStyle ?? "Glossy chrome");
+  const nailShape = String(data.nailShape ?? "Almond");
+  const nailColor = String(data.nailColor ?? "Pearl pink");
+  const camera = String(data.cameraMovement ?? "Macro push-in");
+  const lighting = String(data.lighting ?? "Soft beauty lighting");
+  const processStyle = String(data.revealStyle ?? "mystery_macro_build");
+  const colorMode = String(data.colorMode ?? "soft_pastel");
+  const variant = chooseLocalVariant(coreIdea + nailStyle + nailColor, recentPrompts, previousPrompt);
+  const hooks = [
+    "Start with extreme macro fragments of one clean adult fingernail: a tiny highlight, a cropped brush tip, and glossy texture only, so the final design cannot be guessed.",
+    "Open on a tight texture close-up of wet gel reflecting salon lights, with the brush entering frame before any full pattern is visible.",
+    "Begin with a fast beauty macro shot of small dots, thin strokes, and shimmer particles appearing on one nail, keeping the full design unreadable.",
+    "Use a cropped side angle where only the nail edge, tool tip, and partial color trail are visible, creating curiosity before the final view.",
+    "Start with rack focus from a polish droplet to one small line detail, avoiding a full hand and avoiding any complete finished design.",
+    "Open with a clean base coat and fast micro strokes appearing section by section like an image being generated live through real nail tools.",
+  ];
+  const buildBeats = [
+    "0.0-2.0s: macro fragments and tool contact; 2.0-5.5s: rapid brush assembly with controlled strokes; 5.5-7.0s: detail accents and glossy top coat; final seconds: first full nail-art hero view.",
+    "Use cropped steps: base shine, first line, color fill, small accent, reflection pass, then one smooth final pullback.",
+    "Make every stage visibly cause the next stage: brush stroke creates line, dotting tool creates accents, top coat creates final shine.",
+    "Keep the camera moving through parallax and rack focus, never holding a static full design before the end.",
+    "Build the art in fast readable passes without AI morphing, melting polish, duplicated nails, or changing nail shape.",
+    "Let the final pattern connect only during the last 1.5 seconds, then hold a sharp social-media thumbnail frame.",
+  ];
+  return `A 9:16 vertical ${duration} AI video prompt for Google Flow. ${hooks[variant]} Create ${nailStyle} on a ${nailShape} nail using ${nailColor}. Core idea: ${coreIdea}. Video style: ${processStyleInstruction("nails_video", processStyle)} Color mode: ${colorModeInstruction("nails_video", colorMode)} Camera: ${camera}; lighting: ${lighting}. ${buildBeats[variant]} Show only one stable adult finger and one nail; avoid full hands, extra fingers, warped cuticles, changing nail length, messy failure looks, random scribbles, wipe-away tricks, captions, logos, and watermarks. The final 1.5-2 seconds must be the first clean full finished nail-art hero view, sharp, glossy, centered, and fully inside the frame.`;
+}
+
+function buildLocalTattooPrompt(data: Record<string, unknown>, recentPrompts: string[], previousPrompt?: string): string {
+  const coreIdea = String(data.coreIdea ?? "").trim();
+  const tattooStyle = String(data.tattooStyle ?? "Realistic");
+  const bodyPart = String(data.bodyPartDescription ?? data.bodyPartLabel ?? data.bodyPart ?? "the outer forearm");
+  const inkStyle = String(data.inkStyle ?? "Black ink");
+  const subjectGender = String(data.subjectGender ?? "woman") === "man" ? "adult man age 21+" : "adult woman age 21+";
+  const camera = String(data.cameraMovement ?? "Macro close-up");
+  const lighting = String(data.lighting ?? "Studio rim lighting");
+  const processStyle = String(data.revealStyle ?? "mystery_macro_build");
+  const colorMode = String(data.colorMode ?? "black_grey");
+  const variant = chooseLocalVariant(coreIdea + tattooStyle + bodyPart, recentPrompts, previousPrompt);
+  const hooks = [
+    "Start with extreme macro fragments: a needle tip, a partial curved line, skin texture, and a tiny stencil section only, so the final tattoo subject cannot be identified.",
+    "Open on cropped ink texture and gloved-hand movement across one selected body part, showing progress without revealing the full stencil.",
+    "Begin with fast linework appearing in small disconnected fragments, like an image being generated live through realistic tattoo needle passes.",
+    "Use a shallow-focus macro path across texture strokes, ink caps, and partial shading patches before the viewer understands the final design.",
+    "Start with a tight rack-focus shot from the tattoo machine to one small line detail, keeping the overall artwork unreadable.",
+    "Open with controlled micro strokes and partial shading in a premium studio setup, never showing the completed tattoo at the beginning.",
+  ];
+  const buildBeats = [
+    "0.0-1.5s: curiosity macro hook; 1.5-4.0s: cropped build progress; 4.0-7.2s: fast meaningful needle passes; 7.2-8.0s: final connecting details; 8.0-10.0s: first full hero view.",
+    "Use preparation, cropped stencil fragment, rapid linework, shading pass, highlight detail, then a clean final pullback.",
+    "Make each visible tool step create real progress, with consistent placement, consistent tattoo shape, and normal ink behavior.",
+    "Keep the camera choreographed with macro glide, parallax, and focus pulls, saving the complete readable design for the last two seconds.",
+    "Show satisfying professional process, not a botched tattoo, not a chaotic scribble, and not a wipe-away hidden-art trick.",
+    "End with an unobstructed, sharp, fully framed finished tattoo suitable as a vertical social-media thumbnail.",
+  ];
+  return `A 9:16 vertical 10-second AI video prompt for Google Flow. ${hooks[variant]} Subject: glamorous ${subjectGender}, tasteful non-explicit styling, natural skin texture, stable anatomy. Tattoo concept: ${coreIdea}. Placement: ${bodyPart}. Style: ${tattooStyle}; ink: ${inkStyle}. Video style: ${processStyleInstruction("tattoo_video", processStyle)} Color mode: ${colorModeInstruction("tattoo_video", colorMode)} Camera: ${camera}; lighting: ${lighting}. ${buildBeats[variant]} Avoid full body framing, extra fingers, duplicated hands, warped limbs, rubber skin, excessive blood, nudity, captions, logos, watermarks, AI morphing, and any full tattoo or full stencil visible at the start. The final two seconds must be the first complete finished-art hero view, unobstructed and fully inside the frame.`;
+}
+
+async function generateLocalPrompt(payload: GenerateLocalPromptPayload): Promise<Response> {
+  const validationError = validateGeneratePayload(payload as unknown as GeneratePromptPayload);
+  if (validationError) return errorJson(validationError, 400);
+  const data = payload.formData ?? {};
+  const recentPrompts = await fetchRecentSheetPrompts();
+  const prompt = payload.toolType === "tattoo_video"
+    ? buildLocalTattooPrompt(data, recentPrompts, payload.previousPrompt)
+    : buildLocalNailsPrompt(data, recentPrompts, payload.previousPrompt);
+  const generationId = generateId();
+  const sheetResult = await saveToGoogleSheets(
+    buildSheetRecord(generationId, payload.toolType, data, prompt, "Free local prompt engine", true),
+  );
+  return json({
+    prompt,
+    model: "Free local prompt engine",
+    fallbackUsed: true,
+    generationId,
+    sheetSaved: sheetResult.sheetSaved,
+    sheetError: sheetResult.sheetError,
+  });
 }
 
 // ─── Trend parsing ────────────────────────────────────────────────────────
@@ -1386,8 +1489,16 @@ async function handleRequest(req: Request): Promise<Response> {
 
     const payload = body as Partial<Payload>;
     const action = payload.action as Action | undefined;
-    if (!action || !["generate_prompt", "get_trends", "health_check", "retry_sheet_save"].includes(action)) {
+    if (!action || !["generate_prompt", "generate_local_prompt", "get_trends", "health_check", "retry_sheet_save"].includes(action)) {
       return errorJson("Invalid action.", 400);
+    }
+
+    const toolType = payload.toolType;
+    if (action === "generate_local_prompt") {
+      if (toolType !== "nails_video" && toolType !== "tattoo_video") {
+        return errorJson("Invalid toolType.", 400);
+      }
+      return await generateLocalPrompt(payload as GenerateLocalPromptPayload);
     }
 
     // Extract user-provided key from custom header
@@ -1402,7 +1513,6 @@ async function handleRequest(req: Request): Promise<Response> {
       return await retrySheetSave(payload as RetrySheetSavePayload);
     }
 
-    const toolType = payload.toolType;
     if (toolType !== "nails_video" && toolType !== "tattoo_video") {
       return errorJson("Invalid toolType.", 400);
     }

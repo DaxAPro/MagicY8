@@ -50,7 +50,7 @@ export class GeminiError extends Error {
   }
 }
 
-async function postJson<T>(body: unknown, apiKey: string): Promise<T> {
+async function postJson<T>(body: unknown, apiKey?: string): Promise<T> {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL === "undefined") {
     throw new GeminiError(
       "Server connector is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local, then restart the app.",
@@ -61,19 +61,21 @@ async function postJson<T>(body: unknown, apiKey: string): Promise<T> {
 
   let res: Response;
   try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      apikey: SUPABASE_ANON_KEY,
+    };
+    if (apiKey) headers["X-User-Groq-Key"] = apiKey;
+
     res = await fetch(FUNCTION_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        apikey: SUPABASE_ANON_KEY,
-        "X-User-Groq-Key": apiKey,
-      },
+      headers,
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(45_000),
     });
   } catch {
-    throw new GeminiError("Could not connect to Groq.", 0, "network");
+    throw new GeminiError("Could not connect to the prompt server.", 0, "network");
   }
 
   let data: unknown;
@@ -126,6 +128,30 @@ export async function generatePrompt(
   }, apiKey);
   if (!result.prompt || typeof result.prompt !== "string") {
     throw new GeminiError("Groq returned an empty response.", 502, "empty");
+  }
+  return result;
+}
+
+export async function generateLocalPrompt(
+  toolType: ToolType,
+  formData: Record<string, unknown>,
+  previousPrompt?: string,
+): Promise<GenerateResult> {
+  if (!hasSupabaseSetup()) {
+    throw new GeminiError(
+      "Server connector is not configured. Free mode needs the Supabase connector so prompts can save to Google Sheets.",
+      0,
+      "configuration",
+    );
+  }
+  const result = await postJson<GenerateResult>({
+    action: "generate_local_prompt",
+    toolType,
+    formData,
+    previousPrompt,
+  });
+  if (!result.prompt || typeof result.prompt !== "string") {
+    throw new GeminiError("Free prompt engine returned an empty response.", 502, "empty");
   }
   return result;
 }
