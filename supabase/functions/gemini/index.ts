@@ -1014,6 +1014,11 @@ async function saveToGoogleSheets(record: SheetRecord): Promise<SheetSaveResult>
 
   const body = JSON.stringify({
     ...record,
+    // Compatibility for older Apps Script versions that save only:
+    // Date, Category, Idea, MasterPrompt.
+    category: record.toolType === "tattoo_video" ? "Tattoo Video" : "Nails Style Video",
+    idea: record.originalCoreIdea,
+    prompt: record.finalPrompt,
     webhookSecret: GOOGLE_SHEETS_WEBHOOK_SECRET,
   });
 
