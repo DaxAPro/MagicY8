@@ -263,7 +263,7 @@ export function PromptOutput({
                       ))}
                     </HStack>
 
-                    {/* Google Sheets save status */}
+                    {/* Database save status */}
                     {effectiveStatus && (
                       <Box
                         mt="3"
@@ -317,10 +317,10 @@ export function PromptOutput({
                               }
                             >
                               {effectiveStatus === "saved"
-                                ? "Saved to Google Sheets"
+                                ? "Saved to database"
                                 : effectiveStatus === "pending"
-                                  ? "Sheet sync pending"
-                                  : "Google Sheets sync failed"}
+                                  ? "Database sync pending"
+                                  : "Database sync failed"}
                             </Text>
                           </HStack>
                           {effectiveStatus === "failed" && generationId && (

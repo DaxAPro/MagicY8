@@ -375,7 +375,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
               </Box>
             )}
 
-            {/* Google Sheet sync */}
+            {/* Database sync */}
             <Box
               p="3" borderRadius="lg"
               css={{
@@ -387,15 +387,15 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
               <HStack justify="space-between" gap="3" mb="2">
                 <Box>
                   <Text textStyle="xs" fontWeight="semibold" color="green.300">
-                    Google Sheet Sync
+                    Database Sync
                   </Text>
                   <Text textStyle="xs" color="gray.600">
-                    Secure server connector is active.
+                    Firebase Firestore is used when configured.
                   </Text>
                 </Box>
               </HStack>
               <Text textStyle="xs" color="gray.600" mt="2">
-                The private Sheet destination is hidden from the browser.
+                Google Sheet fallback stays hidden on the secure server.
               </Text>
             </Box>
 

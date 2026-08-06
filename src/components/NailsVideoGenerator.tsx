@@ -16,6 +16,7 @@ import { useCallback, useRef, useState } from "react"
 import { LuSparkles, LuWandSparkles } from "react-icons/lu"
 import { generateLocalPrompt, generatePrompt, GeminiError } from "../services/geminiApi"
 import { getApiKey } from "../services/apiKeyStorage"
+import { savePromptToFirebase } from "../services/firebasePromptStore"
 import { addPendingRecord } from "../services/sheetRetryQueue"
 import type { HistoryEntry, NailsVideoFormState, SheetStatus } from "../types"
 import { PromptOutput } from "./PromptOutput"
@@ -164,10 +165,22 @@ export function NailsVideoGenerator({
         : await generateLocalPrompt("nails_video", requestData, lastPromptRef.current)
       setOutput(result.prompt)
       setGenerationId(result.generationId)
-      setSheetStatus(result.sheetSaved ? "saved" : result.sheetError ? "failed" : "pending")
+      const firebaseResult = await savePromptToFirebase({
+        generationId: result.generationId,
+        toolType: "nails_video",
+        category: "Nails Style Video",
+        coreIdea: form.coreIdea,
+        finalPrompt: result.prompt,
+        model: result.model,
+        formData: requestData,
+        fallbackUsed: result.fallbackUsed,
+      })
+      const dataSaved = firebaseResult.saved || result.sheetSaved
+      const dataError = firebaseResult.error ?? result.sheetError
+      setSheetStatus(dataSaved ? "saved" : dataError ? "failed" : "pending")
       onModelUsed?.(result.model)
       lastPromptRef.current = result.prompt
-      if (result.sheetError && result.generationId && result.syncToken && !result.generationId.startsWith("local_")) {
+      if (!dataSaved && result.sheetError && result.generationId && result.syncToken && !result.generationId.startsWith("local_")) {
         addPendingRecord({
           generationId: result.generationId,
           toolType: "nails_video",
@@ -196,8 +209,8 @@ export function NailsVideoGenerator({
         revealStyle: form.revealStyle,
         colorMode: form.colorMode,
         generationId: result.generationId,
-        sheetSaved: result.sheetSaved,
-        sheetError: result.sheetError,
+        sheetSaved: dataSaved,
+        sheetError: dataError,
       })
     } catch (err) {
       setError(err instanceof GeminiError ? err.message : "Something went wrong. Please try again.")

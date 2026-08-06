@@ -17,6 +17,7 @@ import { useCallback, useRef, useState } from "react"
 import { LuPenTool, LuVideo } from "react-icons/lu"
 import { generateLocalPrompt, generatePrompt, GeminiError } from "../services/geminiApi"
 import { getApiKey } from "../services/apiKeyStorage"
+import { savePromptToFirebase } from "../services/firebasePromptStore"
 import { addPendingRecord } from "../services/sheetRetryQueue"
 import type { HistoryEntry, SheetStatus, TattooVideoFormState } from "../types"
 import { PromptOutput } from "./PromptOutput"
@@ -233,8 +234,18 @@ export function TattooVideoGenerator({
         sheetError: sheetErr,
         syncToken,
       } = result
-      const finalSheetSaved = sheetSaved
-      const finalSheetError = sheetErr
+      const firebaseResult = await savePromptToFirebase({
+        generationId: genId,
+        toolType: "tattoo_video",
+        category: "Tattoo Video",
+        coreIdea: form.coreIdea,
+        finalPrompt: prompt,
+        model,
+        formData: requestData,
+        fallbackUsed,
+      })
+      const finalSheetSaved = firebaseResult.saved || sheetSaved
+      const finalSheetError = firebaseResult.error ?? sheetErr
       setOutput(prompt)
       onModelUsed?.(model)
       setGenerationId(genId)
