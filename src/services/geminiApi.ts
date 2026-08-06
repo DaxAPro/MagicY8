@@ -1,3 +1,5 @@
+import { buildBrowserLocalPrompt, getLocalTrends } from "./localPromptEngine";
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/gemini`;
@@ -138,18 +140,26 @@ export async function generateLocalPrompt(
   previousPrompt?: string,
 ): Promise<GenerateResult> {
   if (!hasSupabaseSetup()) {
-    throw new GeminiError(
-      "Server connector is not configured. Free mode needs the Supabase connector so prompts can save to Google Sheets.",
-      0,
-      "configuration",
-    );
+    return {
+      prompt: buildBrowserLocalPrompt(toolType, formData, previousPrompt),
+      model: "Browser free prompt engine",
+      fallbackUsed: true,
+      generationId: `local_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`,
+      sheetSaved: false,
+    };
   }
   const result = await postJson<GenerateResult>({
     action: "generate_local_prompt",
     toolType,
     formData,
     previousPrompt,
-  });
+  }).catch(() => ({
+    prompt: buildBrowserLocalPrompt(toolType, formData, previousPrompt),
+    model: "Browser free prompt engine",
+    fallbackUsed: true,
+    generationId: `local_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`,
+    sheetSaved: false,
+  }));
   if (!result.prompt || typeof result.prompt !== "string") {
     throw new GeminiError("Free prompt engine returned an empty response.", 502, "empty");
   }
@@ -180,9 +190,14 @@ export async function retrySheetSave(
 
 export async function getTrends(toolType: ToolType, apiKey?: string): Promise<TrendResult> {
   if (!hasSupabaseSetup()) {
-    return { ideas: [], fallback: true, error: "Live trends need the server connector." };
+    return { ideas: getLocalTrends(toolType), fallback: true, updatedAt: Date.now(), model: "Browser trend pool" };
   }
-  return postJson<TrendResult>({ action: "get_trends", toolType }, apiKey);
+  return postJson<TrendResult>({ action: "get_trends", toolType }, apiKey).catch(() => ({
+    ideas: getLocalTrends(toolType),
+    fallback: true,
+    updatedAt: Date.now(),
+    model: "Browser trend pool",
+  }));
 }
 
 export async function testGeminiConnection(apiKey: string): Promise<HealthCheckResult> {
