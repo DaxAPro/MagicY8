@@ -134,17 +134,7 @@ export function TrendingPanel({ toolType, onSelectTopic, generating }: TrendingP
       }
 
       try {
-        const apiKey = getApiKey()
-        if (!apiKey) {
-          if (!mountedRef.current) return
-          const fallback =
-            toolType === "tattoo_video" ? FALLBACK_TATTOO : FALLBACK_AI
-          setIdeas(fallback)
-          setIsFallback(true)
-          setUpdatedAt(undefined)
-          setError("")
-          return
-        }
+        const apiKey = getApiKey() ?? undefined
         const result = await getTrends(toolType, apiKey)
         if (!mountedRef.current) return
 
@@ -422,7 +412,7 @@ export function TrendingPanel({ toolType, onSelectTopic, generating }: TrendingP
         >
           <Text textStyle="xs" color="gray.600">
             {isFallback
-              ? "Showing suggested ideas. Add an API key to refresh live trends."
+              ? "Showing saved suggestions because live trends are unavailable."
               : "Click any topic to instantly fill your core idea."}
           </Text>
         </Box>

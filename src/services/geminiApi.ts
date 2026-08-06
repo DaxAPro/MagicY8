@@ -178,7 +178,7 @@ export async function retrySheetSave(
   }, apiKey);
 }
 
-export async function getTrends(toolType: ToolType, apiKey: string): Promise<TrendResult> {
+export async function getTrends(toolType: ToolType, apiKey?: string): Promise<TrendResult> {
   if (!hasSupabaseSetup()) {
     return { ideas: [], fallback: true, error: "Live trends need the server connector." };
   }

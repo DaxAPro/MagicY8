@@ -54,6 +54,24 @@ type TrendIdea = {
   source?: { name?: string; uri?: string };
 };
 
+const CURATED_NAIL_TRENDS: TrendIdea[] = [
+  { title: "soap nails with sheer glossy finish", description: "Clean translucent shine, natural base, and beauty-commercial macro polish passes." },
+  { title: "cat-eye magnetic gel shimmer", description: "A reflective magnetic streak that moves through the nail during close-up lighting." },
+  { title: "chrome French micro tips", description: "Tiny chrome edge details built in fast clean strokes before the final glossy hero view." },
+  { title: "aura blush nails", description: "Soft airbrushed color glow that stays abstract until the final pullback." },
+  { title: "3D bow and pearl accents", description: "Small luxury charms added in cropped macro steps on one nail." },
+  { title: "velvet glass nails", description: "Layered translucent gel and shimmer texture with a premium salon finish." },
+];
+
+const CURATED_TATTOO_TRENDS: TrendIdea[] = [
+  { title: "fine-line botanical tattoo", description: "Single-needle floral fragments built from cropped linework into a clean final view." },
+  { title: "ornamental blackwork placement", description: "Symmetric black-grey details, negative space, and premium macro needle passes." },
+  { title: "cyber sigil tattoo", description: "Sharp futuristic symbols and circuit-like line fragments revealed only at the end." },
+  { title: "micro-realism portrait detail", description: "Hyper-detailed shading fragments that stay unreadable until the final hero shot." },
+  { title: "abstract geometric animal motif", description: "Cropped curves and shaded geometry that connect into the full subject late." },
+  { title: "red accent blackwork", description: "Black-grey base with one controlled red accent introduced near the final detail pass." },
+];
+
 type Action = "generate_prompt" | "generate_local_prompt" | "get_trends" | "health_check" | "retry_sheet_save";
 
 type GeneratePromptPayload = {
@@ -1123,7 +1141,13 @@ function chooseLocalVariant(seedText: string, recentPrompts: string[], previousP
   return score % markers.length;
 }
 
-function buildLocalNailsPrompt(data: Record<string, unknown>, recentPrompts: string[], previousPrompt?: string): string {
+function chooseTrendReference(coreIdea: string, onlineTrends: TrendIdea[], recentPrompts: string[], previousPrompt?: string): TrendIdea | null {
+  if (onlineTrends.length === 0) return null;
+  const idx = chooseLocalVariant(coreIdea, recentPrompts, previousPrompt) % onlineTrends.length;
+  return onlineTrends[idx] ?? onlineTrends[0] ?? null;
+}
+
+function buildLocalNailsPrompt(data: Record<string, unknown>, recentPrompts: string[], onlineTrends: TrendIdea[], previousPrompt?: string): string {
   const coreIdea = String(data.coreIdea ?? "").trim();
   const duration = String(data.duration ?? "8s");
   const nailStyle = String(data.nailStyle ?? "Glossy chrome");
@@ -1134,6 +1158,8 @@ function buildLocalNailsPrompt(data: Record<string, unknown>, recentPrompts: str
   const processStyle = String(data.revealStyle ?? "mystery_macro_build");
   const colorMode = String(data.colorMode ?? "soft_pastel");
   const variant = chooseLocalVariant(coreIdea + nailStyle + nailColor, recentPrompts, previousPrompt);
+  const trend = chooseTrendReference(coreIdea + nailStyle, onlineTrends, recentPrompts, previousPrompt);
+  const trendLine = trend ? `Trend reference: adapt the current ${trend.title} direction as a subtle style influence, while preserving the user's exact concept.` : "";
   const hooks = [
     "Start with extreme macro fragments of one clean adult fingernail: a tiny highlight, a cropped brush tip, and glossy texture only, so the final design cannot be guessed.",
     "Open on a tight texture close-up of wet gel reflecting salon lights, with the brush entering frame before any full pattern is visible.",
@@ -1150,10 +1176,10 @@ function buildLocalNailsPrompt(data: Record<string, unknown>, recentPrompts: str
     "Build the art in fast readable passes without AI morphing, melting polish, duplicated nails, or changing nail shape.",
     "Let the final pattern connect only during the last 1.5 seconds, then hold a sharp social-media thumbnail frame.",
   ];
-  return `A 9:16 vertical ${duration} AI video prompt for Google Flow. ${hooks[variant]} Create ${nailStyle} on a ${nailShape} nail using ${nailColor}. Core idea: ${coreIdea}. Video style: ${processStyleInstruction("nails_video", processStyle)} Color mode: ${colorModeInstruction("nails_video", colorMode)} Camera: ${camera}; lighting: ${lighting}. ${buildBeats[variant]} Show only one stable adult finger and one nail; avoid full hands, extra fingers, warped cuticles, changing nail length, messy failure looks, random scribbles, wipe-away tricks, captions, logos, and watermarks. The final 1.5-2 seconds must be the first clean full finished nail-art hero view, sharp, glossy, centered, and fully inside the frame.`;
+  return `A 9:16 vertical ${duration} AI video prompt for Google Flow. ${hooks[variant]} Create ${nailStyle} on a ${nailShape} nail using ${nailColor}. Core idea: ${coreIdea}. ${trendLine} Video style: ${processStyleInstruction("nails_video", processStyle)} Color mode: ${colorModeInstruction("nails_video", colorMode)} Camera: ${camera}; lighting: ${lighting}. ${buildBeats[variant]} Show only one stable adult finger and one nail; avoid full hands, extra fingers, warped cuticles, changing nail length, messy failure looks, random scribbles, wipe-away tricks, captions, logos, and watermarks. The final 1.5-2 seconds must be the first clean full finished nail-art hero view, sharp, glossy, centered, and fully inside the frame.`;
 }
 
-function buildLocalTattooPrompt(data: Record<string, unknown>, recentPrompts: string[], previousPrompt?: string): string {
+function buildLocalTattooPrompt(data: Record<string, unknown>, recentPrompts: string[], onlineTrends: TrendIdea[], previousPrompt?: string): string {
   const coreIdea = String(data.coreIdea ?? "").trim();
   const tattooStyle = String(data.tattooStyle ?? "Realistic");
   const bodyPart = String(data.bodyPartDescription ?? data.bodyPartLabel ?? data.bodyPart ?? "the outer forearm");
@@ -1164,6 +1190,8 @@ function buildLocalTattooPrompt(data: Record<string, unknown>, recentPrompts: st
   const processStyle = String(data.revealStyle ?? "mystery_macro_build");
   const colorMode = String(data.colorMode ?? "black_grey");
   const variant = chooseLocalVariant(coreIdea + tattooStyle + bodyPart, recentPrompts, previousPrompt);
+  const trend = chooseTrendReference(coreIdea + tattooStyle, onlineTrends, recentPrompts, previousPrompt);
+  const trendLine = trend ? `Trend reference: adapt the current ${trend.title} direction as a subtle style influence, while preserving the user's exact concept.` : "";
   const hooks = [
     "Start with extreme macro fragments: a needle tip, a partial curved line, skin texture, and a tiny stencil section only, so the final tattoo subject cannot be identified.",
     "Open on cropped ink texture and gloved-hand movement across one selected body part, showing progress without revealing the full stencil.",
@@ -1180,7 +1208,7 @@ function buildLocalTattooPrompt(data: Record<string, unknown>, recentPrompts: st
     "Show satisfying professional process, not a botched tattoo, not a chaotic scribble, and not a wipe-away hidden-art trick.",
     "End with an unobstructed, sharp, fully framed finished tattoo suitable as a vertical social-media thumbnail.",
   ];
-  return `A 9:16 vertical 10-second AI video prompt for Google Flow. ${hooks[variant]} Subject: glamorous ${subjectGender}, tasteful non-explicit styling, natural skin texture, stable anatomy. Tattoo concept: ${coreIdea}. Placement: ${bodyPart}. Style: ${tattooStyle}; ink: ${inkStyle}. Video style: ${processStyleInstruction("tattoo_video", processStyle)} Color mode: ${colorModeInstruction("tattoo_video", colorMode)} Camera: ${camera}; lighting: ${lighting}. ${buildBeats[variant]} Avoid full body framing, extra fingers, duplicated hands, warped limbs, rubber skin, excessive blood, nudity, captions, logos, watermarks, AI morphing, and any full tattoo or full stencil visible at the start. The final two seconds must be the first complete finished-art hero view, unobstructed and fully inside the frame.`;
+  return `A 9:16 vertical 10-second AI video prompt for Google Flow. ${hooks[variant]} Subject: glamorous ${subjectGender}, tasteful non-explicit styling, natural skin texture, stable anatomy. Tattoo concept: ${coreIdea}. Placement: ${bodyPart}. Style: ${tattooStyle}; ink: ${inkStyle}. ${trendLine} Video style: ${processStyleInstruction("tattoo_video", processStyle)} Color mode: ${colorModeInstruction("tattoo_video", colorMode)} Camera: ${camera}; lighting: ${lighting}. ${buildBeats[variant]} Avoid full body framing, extra fingers, duplicated hands, warped limbs, rubber skin, excessive blood, nudity, captions, logos, watermarks, AI morphing, and any full tattoo or full stencil visible at the start. The final two seconds must be the first complete finished-art hero view, unobstructed and fully inside the frame.`;
 }
 
 async function generateLocalPrompt(payload: GenerateLocalPromptPayload): Promise<Response> {
@@ -1188,9 +1216,10 @@ async function generateLocalPrompt(payload: GenerateLocalPromptPayload): Promise
   if (validationError) return errorJson(validationError, 400);
   const data = payload.formData ?? {};
   const recentPrompts = await fetchRecentSheetPrompts();
+  const onlineTrends = await fetchOnlineTrendIdeas(payload.toolType);
   const prompt = payload.toolType === "tattoo_video"
-    ? buildLocalTattooPrompt(data, recentPrompts, payload.previousPrompt)
-    : buildLocalNailsPrompt(data, recentPrompts, payload.previousPrompt);
+    ? buildLocalTattooPrompt(data, recentPrompts, onlineTrends, payload.previousPrompt)
+    : buildLocalNailsPrompt(data, recentPrompts, onlineTrends, payload.previousPrompt);
   const generationId = generateId();
   const sheetResult = await saveToGoogleSheets(
     buildSheetRecord(generationId, payload.toolType, data, prompt, "Free local prompt engine", true),
@@ -1230,6 +1259,52 @@ function parseTrends(raw: string): TrendIdea[] {
   return ideas;
 }
 
+function decodeXmlText(value: string): string {
+  return value
+    .replace(/<!\[CDATA\[(.*?)\]\]>/g, "$1")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function fetchOnlineTrendIdeas(toolType: string): Promise<TrendIdea[]> {
+  const fallback = toolType === "tattoo_video" ? CURATED_TATTOO_TRENDS : CURATED_NAIL_TRENDS;
+  const query = toolType === "tattoo_video"
+    ? "tattoo trend fine line blackwork cyber sigil micro realism"
+    : "nail art trend chrome cat eye aura soap nails";
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      redirect: "follow",
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return fallback;
+    const xml = await res.text();
+    const items = [...xml.matchAll(/<item>[\s\S]*?<title>([\s\S]*?)<\/title>[\s\S]*?<link>([\s\S]*?)<\/link>/gi)]
+      .slice(0, 6)
+      .map((match) => {
+        const title = decodeXmlText(match[1]).replace(/\s+-\s+[^-]+$/, "");
+        const uri = decodeXmlText(match[2]);
+        return {
+          title,
+          description: toolType === "tattoo_video"
+            ? "Online trend reference for tattoo style, placement, motif, or short-form video direction."
+            : "Online trend reference for nail-art color, finish, texture, or short-form macro video direction.",
+          source: { name: "Google News", uri },
+        };
+      })
+      .filter((item) => item.title.length > 4);
+    return items.length > 0 ? items : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 // ─── Safe error mapping ───────────────────────────────────────────────────
 function safeErrorMessage(err: unknown): { message: string; status: number } {
   if (err instanceof GroqCallError) {
@@ -1246,9 +1321,15 @@ function safeErrorMessage(err: unknown): { message: string; status: number } {
 }
 
 // ─── Action handlers ──────────────────────────────────────────────────────
-async function getTrends(toolType: string, apiKey: string): Promise<Response> {
+async function getTrends(toolType: string, apiKey?: string): Promise<Response> {
+  if (!apiKey) {
+    const ideas = await fetchOnlineTrendIdeas(toolType);
+    return json({ ideas, fallback: false, updatedAt: Date.now(), model: "Free online trend fetch" });
+  }
+
   if (!STARTUP_CONFIG.valid) {
-    return errorJson("The configured Groq model is unavailable.", 503);
+    const ideas = await fetchOnlineTrendIdeas(toolType);
+    return json({ ideas, fallback: true, updatedAt: Date.now(), model: "Free online trend fetch" });
   }
 
   const systemMsg = "You are a creative trend researcher. Return ONLY a valid JSON array. No markdown, no commentary, no code fences.";
@@ -1272,8 +1353,9 @@ async function getTrends(toolType: string, apiKey: string): Promise<Response> {
     if (ideas.length === 0) return json({ ideas: [], fallback: true, model: result.modelUsed });
     return json({ ideas, fallback: false, updatedAt: Date.now(), model: result.modelUsed });
   } catch (err) {
-    const { message, status } = safeErrorMessage(err);
-    return json({ ideas: [], fallback: true, error: message }, status >= 400 ? status : 502);
+    const ideas = await fetchOnlineTrendIdeas(toolType);
+    const { message } = safeErrorMessage(err);
+    return json({ ideas, fallback: true, updatedAt: Date.now(), error: message, model: "Free online trend fetch" });
   }
 }
 
@@ -1506,6 +1588,13 @@ async function handleRequest(req: Request): Promise<Response> {
       return await generateLocalPrompt(payload as GenerateLocalPromptPayload);
     }
 
+    if (action === "get_trends") {
+      if (toolType !== "nails_video" && toolType !== "tattoo_video") {
+        return errorJson("Invalid toolType.", 400);
+      }
+      return await getTrends(toolType, getUserKey(req) ?? undefined);
+    }
+
     // Extract user-provided key from custom header
     const userKey = getUserKey(req);
     if (!userKey) {
@@ -1522,7 +1611,6 @@ async function handleRequest(req: Request): Promise<Response> {
       return errorJson("Invalid toolType.", 400);
     }
 
-    if (action === "get_trends") return await getTrends(toolType, userKey);
     return await generatePrompt(payload as GeneratePromptPayload, userKey);
   } catch (err) {
     const msg = err instanceof Error ? redactKey(err.message) : "Internal server error.";
