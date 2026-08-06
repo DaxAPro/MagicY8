@@ -34,8 +34,7 @@ service cloud.firestore {
         request.resource.data.originalCoreIdea.size() <= 2000 &&
         request.resource.data.finalPrompt is string &&
         request.resource.data.finalPrompt.size() > 0 &&
-        request.resource.data.finalPrompt.size() <= 12000 &&
-        request.resource.data.createdAt == request.time;
+        request.resource.data.finalPrompt.size() <= 12000;
     }
   }
 }
