@@ -219,7 +219,7 @@ export function TattooVideoGenerator({
       const apiKey = getApiKey()
       const result = apiKey
         ? await generatePrompt("tattoo_video", requestData, apiKey, lastPromptRef.current).catch(async (err) => {
-          if (err instanceof GeminiError && ["rate_limit", "invalid_key", "model_unavailable"].includes(err.code ?? "")) {
+          if (err instanceof GeminiError) {
             return generateLocalPrompt("tattoo_video", requestData, lastPromptRef.current)
           }
           throw err
@@ -234,6 +234,11 @@ export function TattooVideoGenerator({
         sheetError: sheetErr,
         syncToken,
       } = result
+      setOutput(prompt)
+      onModelUsed?.(model)
+      setGenerationId(genId)
+      lastPromptRef.current = prompt
+
       const firebaseResult = await savePromptToFirebase({
         generationId: genId,
         toolType: "tattoo_video",
@@ -246,10 +251,6 @@ export function TattooVideoGenerator({
       })
       const finalSheetSaved = firebaseResult.saved || sheetSaved
       const finalSheetError = firebaseResult.error ?? sheetErr
-      setOutput(prompt)
-      onModelUsed?.(model)
-      setGenerationId(genId)
-      lastPromptRef.current = prompt
 
       if (finalSheetSaved) {
         setSheetStatus("saved")

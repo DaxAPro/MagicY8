@@ -9,7 +9,7 @@ import type { SheetStatus } from "../types"
 
 const MotionBox = motion.create(Box)
 
-type AccentColor = "purple" | "blue" | "cyan" | "orange"
+type AccentColor = "purple" | "blue" | "cyan" | "orange" | "pink"
 
 const ACCENT: Record<
   AccentColor,
@@ -35,6 +35,13 @@ const ACCENT: Record<
     text: "orange.300",
     hover: "rgba(249,115,22,0.12)",
     icon: "orange.400",
+  },
+  pink: {
+    glow: "0 0 30px rgba(236,72,153,0.42)",
+    border: "rgba(236,72,153,0.3)",
+    text: "pink.300",
+    hover: "rgba(236,72,153,0.12)",
+    icon: "pink.400",
   },
   blue: {
     glow: "0 0 20px rgba(59,130,246,0.4)",

@@ -157,7 +157,7 @@ export function NailsVideoGenerator({
       const apiKey = getApiKey()
       const result = apiKey
         ? await generatePrompt("nails_video", requestData, apiKey, lastPromptRef.current).catch(async (err) => {
-          if (err instanceof GeminiError && ["rate_limit", "invalid_key", "model_unavailable"].includes(err.code ?? "")) {
+          if (err instanceof GeminiError) {
             return generateLocalPrompt("nails_video", requestData, lastPromptRef.current)
           }
           throw err
