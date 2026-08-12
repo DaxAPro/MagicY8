@@ -164,6 +164,11 @@ export function validatePromptIdea(input: string, toolType: ToolType): string | 
     return "මේක random text වගේ. Real design idea එකක් type කරන්න, e.g. pink chrome French tips.";
   }
 
+  const hasMeaningfulTerm = words.some((word) => MEANINGFUL_TERMS.has(word));
+  if (words.length === 1 && !hasMeaningfulTerm) {
+    return "මේක random text වගේ. Real design idea එකක් type කරන්න, e.g. pink chrome French tips.";
+  }
+
   const nailDomain = hasAny(words, NAIL_TERMS);
   const tattooDomain = hasAny(words, TATTOO_TERMS);
   if (toolType === "nails_video" && tattooDomain && !nailDomain) {
