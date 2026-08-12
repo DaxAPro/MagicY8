@@ -17,6 +17,7 @@ import { LuSparkles, LuWandSparkles } from "react-icons/lu"
 import { generateLocalPrompt, generatePrompt, GeminiError } from "../services/geminiApi"
 import { getApiKey } from "../services/apiKeyStorage"
 import { savePromptToFirebase } from "../services/firebasePromptStore"
+import { validatePromptIdea } from "../services/promptValidation"
 import { addPendingRecord } from "../services/sheetRetryQueue"
 import type { HistoryEntry, NailsVideoFormState, SheetStatus } from "../types"
 import { PromptOutput } from "./PromptOutput"
@@ -24,13 +25,6 @@ import { SelectField } from "./formControls"
 
 const MotionBox = motion.create(Box)
 const glowPink = "0 0 20px rgba(236,72,153,0.38)"
-
-const durations = createListCollection({
-  items: [
-    { label: "8 seconds / තත්පර 8", value: "8s" },
-    { label: "10 seconds / තත්පර 10", value: "10s" },
-  ],
-})
 
 const nailStyles = createListCollection({
   items: [
@@ -121,7 +115,7 @@ export function NailsVideoGenerator({
 }: NailsVideoGeneratorProps) {
   const [form, setForm] = useState<NailsVideoFormState>({
     coreIdea: initialForm?.coreIdea ?? "",
-    duration: initialForm?.duration ?? "8s",
+    duration: "10s",
     nailStyle: initialForm?.nailStyle ?? "Glossy chrome",
     nailShape: initialForm?.nailShape ?? "Almond",
     nailColor: initialForm?.nailColor ?? "Pearl pink",
@@ -147,13 +141,19 @@ export function NailsVideoGenerator({
 
   const handleGenerate = async () => {
     if (!form.coreIdea.trim() || generatingRef.current) return
+    const validationError = validatePromptIdea(form.coreIdea)
+    if (validationError) {
+      setOutput("")
+      setError(validationError)
+      return
+    }
     generatingRef.current = true
     setLoading(true)
     setError("")
     setOutput("")
     onGeneratingChange?.(true)
     try {
-      const requestData = { ...form, videoRatio: "9:16", variationSeed: crypto.randomUUID() }
+      const requestData = { ...form, duration: "10s", videoRatio: "9:16", variationSeed: crypto.randomUUID() }
       const apiKey = getApiKey()
       const result = apiKey
         ? await generatePrompt("nails_video", requestData, apiKey, lastPromptRef.current).catch(async (err) => {
@@ -202,7 +202,7 @@ export function NailsVideoGenerator({
         prompt: result.prompt,
         model: result.model,
         videoRatio: "9:16",
-        duration: form.duration,
+        duration: "10s",
         nailStyle: form.nailStyle,
         nailShape: form.nailShape,
         nailColor: form.nailColor,
@@ -236,7 +236,6 @@ export function NailsVideoGenerator({
 
       <MotionBox initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} p="4" borderRadius="2xl" css={{ background: "rgba(255,255,255,0.03)", borderWidth: "1px", borderColor: "rgba(236,72,153,0.15)" }}>
         <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap="3">
-          <SelectField label="Duration / කාලය" collection={durations} value={[form.duration]} onChange={([v]) => setField("duration", v ?? "8s")} accentColor="pink" />
           <SelectField label="Nail Style / නිය style" collection={nailStyles} value={[form.nailStyle]} onChange={([v]) => setField("nailStyle", v ?? "Glossy chrome")} accentColor="pink" />
           <SelectField label="Nail Shape / නිය හැඩය" collection={nailShapes} value={[form.nailShape]} onChange={([v]) => setField("nailShape", v ?? "Almond")} accentColor="pink" />
           <SelectField label="Color Palette / පාට set එක" collection={nailColors} value={[form.nailColor]} onChange={([v]) => setField("nailColor", v ?? "Pearl pink")} accentColor="pink" />
@@ -250,13 +249,14 @@ export function NailsVideoGenerator({
       <MotionBox initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} p="4" borderRadius="2xl" css={{ background: "rgba(255,255,255,0.03)", borderWidth: "1px", borderColor: "rgba(236,72,153,0.15)" }}>
         <Text fontWeight="semibold" color="pink.300" mb="1.5" css={{ textTransform: "uppercase", fontSize: "0.63rem" }}>Nail Video Idea / නිය වීඩියෝ අදහස *</Text>
         <Textarea placeholder="e.g. pink chrome French tip nails, art builds fast step by step, final design only at the end" value={form.coreIdea} onChange={(e) => setField("coreIdea", e.target.value)} rows={3} resize="none" css={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(236,72,153,0.3)", color: "white", _focus: { borderColor: "#ec4899", boxShadow: glowPink } }} />
+        <Text textStyle="xs" color="gray.500" mt="2">Duration fixed: 10 seconds / කාලය තත්පර 10යි</Text>
       </MotionBox>
 
       <Button type="button" w="full" size="xl" loading={loading} loadingText="Creating your nails video prompt..." onClick={handleGenerate} disabled={!form.coreIdea.trim() || loading} css={{ background: "linear-gradient(135deg, #db2777 0%, #7c3aed 55%, #0891b2 100%)", color: "white", fontWeight: "bold", minH: "56px", boxShadow: !loading ? glowPink : "none" }}>
         {!loading && <HStack gap="2.5"><Icon fontSize="xl"><LuWandSparkles /></Icon><Text>Generate Nails Video Prompt / නිය prompt හදන්න</Text><Icon fontSize="xl"><LuSparkles /></Icon></HStack>}
       </Button>
 
-      <PromptOutput output={output} loading={loading} error={error} copied={copied} onCopy={handleCopy} accentColor="pink" title="Nails Style Video Prompt" loadingText="Creating your nails video prompt..." tags={["9:16", form.duration, "Nails Style"]} sheetStatus={sheetStatus} generationId={generationId} />
+      <PromptOutput output={output} loading={loading} error={error} copied={copied} onCopy={handleCopy} accentColor="pink" title="Nails Style Video Prompt" loadingText="Creating your nails video prompt..." tags={["9:16", "10s", "Nails Style"]} sheetStatus={sheetStatus} generationId={generationId} />
     </VStack>
   )
 }

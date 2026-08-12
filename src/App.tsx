@@ -67,11 +67,15 @@ function useLocalStorage<T>(key: string, initial: T): [T, (val: T) => void] {
 
 function migrateHistory(entries: HistoryEntry[]): HistoryEntry[] {
   return entries.filter((entry) => entry.format !== "image").map((entry) => {
-    if (entry.toolType) return entry
     // Migrate old entries into current nails/tattoo video tools.
     let toolType: ToolType = "nails_video"
-    if (entry.category === "Tattoo Video") toolType = "tattoo_video"
-    return { ...entry, toolType }
+    if (entry.toolType) toolType = entry.toolType
+    else if (entry.category === "Tattoo Video") toolType = "tattoo_video"
+    return {
+      ...entry,
+      toolType,
+      duration: "10s",
+    }
   })
 }
 

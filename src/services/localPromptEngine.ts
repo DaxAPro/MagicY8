@@ -92,7 +92,7 @@ export function buildBrowserLocalPrompt(
 
 function buildNailsPrompt(data: Record<string, unknown>, previousPrompt?: string): string {
   const coreIdea = String(data.coreIdea ?? "").trim();
-  const duration = String(data.duration ?? "8s");
+  const duration = "10s";
   const nailStyle = String(data.nailStyle ?? "Glossy chrome");
   const nailShape = String(data.nailShape ?? "Almond");
   const nailColor = String(data.nailColor ?? "Pearl pink");

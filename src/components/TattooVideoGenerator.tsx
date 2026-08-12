@@ -18,6 +18,7 @@ import { LuPenTool, LuVideo } from "react-icons/lu"
 import { generateLocalPrompt, generatePrompt, GeminiError } from "../services/geminiApi"
 import { getApiKey } from "../services/apiKeyStorage"
 import { savePromptToFirebase } from "../services/firebasePromptStore"
+import { validatePromptIdea } from "../services/promptValidation"
 import { addPendingRecord } from "../services/sheetRetryQueue"
 import type { HistoryEntry, SheetStatus, TattooVideoFormState } from "../types"
 import { PromptOutput } from "./PromptOutput"
@@ -195,6 +196,12 @@ export function TattooVideoGenerator({
   const handleGenerate = async () => {
     if (!form.coreIdea.trim()) return
     if (generatingRef.current) return
+    const validationError = validatePromptIdea(form.coreIdea)
+    if (validationError) {
+      setOutput("")
+      setError(validationError)
+      return
+    }
 
     generatingRef.current = true
     setLoading(true)

@@ -40,7 +40,7 @@ export async function savePromptDirectToGoogleSheets(
     negativePrompt: "",
     targetGenerator: "Groq direct",
     aspectRatio: "9:16",
-    duration: payload.duration ?? (payload.toolType === "tattoo_video" ? "10s" : "8s"),
+    duration: payload.duration ?? "10s",
     cameraMovement: "",
     shotType: payload.toolType === "tattoo_video" ? "Single continuous tattoo process" : "Nails style reveal",
     motionPace: "Curiosity hook to clean final reveal",
