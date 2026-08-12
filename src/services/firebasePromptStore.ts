@@ -1,4 +1,9 @@
 import type { ToolType } from "../types";
+import {
+  normalizeFormDataForSave,
+  normalizeGeneratedPrompt,
+  validatePromptIdea,
+} from "./promptValidation";
 
 type FirebaseApp = import("firebase/app").FirebaseApp;
 
@@ -36,21 +41,28 @@ export interface PromptStorePayload {
 export async function savePromptToFirebase(
   payload: PromptStorePayload,
 ): Promise<{ saved: boolean; skipped?: boolean; error?: string }> {
+  const validationError = validatePromptIdea(payload.coreIdea, payload.toolType);
+  if (validationError) {
+    return { saved: false, skipped: true, error: "Skipped invalid prompt data." };
+  }
+
   const firebaseApp = await createFirebaseApp();
   if (!firebaseApp) return { saved: false, skipped: true };
 
   try {
     const { addDoc, collection, getFirestore, serverTimestamp } = await import("firebase/firestore");
     const db = getFirestore(firebaseApp);
+    const formData = normalizeFormDataForSave(payload.formData, payload.toolType);
+    const finalPrompt = normalizeGeneratedPrompt(payload.finalPrompt, payload.toolType);
     await addDoc(collection(db, "prompts"), {
       generationId: payload.generationId ?? "",
       toolType: payload.toolType,
       category: payload.category,
-      originalCoreIdea: payload.coreIdea,
-      finalPrompt: payload.finalPrompt,
+      originalCoreIdea: payload.coreIdea.trim(),
+      finalPrompt,
       modelUsed: payload.model ?? "",
       fallbackUsed: Boolean(payload.fallbackUsed),
-      formData: payload.formData,
+      formData,
       applicationName: "MagicY8",
       createdAt: serverTimestamp(),
       createdAtClient: new Date().toISOString(),

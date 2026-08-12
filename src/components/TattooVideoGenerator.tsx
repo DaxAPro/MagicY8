@@ -18,7 +18,7 @@ import { LuPenTool, LuVideo } from "react-icons/lu"
 import { generateLocalPrompt, generatePrompt, GeminiError } from "../services/geminiApi"
 import { getApiKey } from "../services/apiKeyStorage"
 import { savePromptToFirebase } from "../services/firebasePromptStore"
-import { validatePromptIdea } from "../services/promptValidation"
+import { getPromptIdeaFeedback, validatePromptIdea } from "../services/promptValidation"
 import { addPendingRecord } from "../services/sheetRetryQueue"
 import type { HistoryEntry, SheetStatus, TattooVideoFormState } from "../types"
 import { PromptOutput } from "./PromptOutput"
@@ -196,7 +196,7 @@ export function TattooVideoGenerator({
   const handleGenerate = async () => {
     if (!form.coreIdea.trim()) return
     if (generatingRef.current) return
-    const validationError = validatePromptIdea(form.coreIdea)
+    const validationError = validatePromptIdea(form.coreIdea, "tattoo_video")
     if (validationError) {
       setOutput("")
       setError(validationError)
@@ -320,6 +320,10 @@ export function TattooVideoGenerator({
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const ideaFeedback = form.coreIdea.trim()
+    ? getPromptIdeaFeedback(form.coreIdea, "tattoo_video")
+    : undefined
+
   return (
     <VStack gap="4" align="stretch">
       {/* Info banner */}
@@ -429,6 +433,19 @@ export function TattooVideoGenerator({
               },
             }}
           />
+          <HStack justify="space-between" align="center" mt="2" gap="3" flexWrap="wrap">
+            <Text textStyle="xs" color="gray.500">Duration fixed: 10 seconds / කාලය තත්පර 10යි</Text>
+            {ideaFeedback && (
+              <Text textStyle="xs" color={ideaFeedback.label === "Weak" ? "red.300" : ideaFeedback.label === "Good" ? "yellow.300" : "green.300"}>
+                Idea quality: {ideaFeedback.label} ({ideaFeedback.score}%)
+              </Text>
+            )}
+          </HStack>
+          {ideaFeedback?.label === "Weak" && (
+            <Button type="button" size="xs" mt="2" variant="ghost" onClick={() => setField("coreIdea", ideaFeedback.suggestion)} css={{ color: "orange.300", _hover: { background: "rgba(249,115,22,0.12)" } }}>
+              Improve idea suggestion
+            </Button>
+          )}
         </Box>
       </MotionBox>
 

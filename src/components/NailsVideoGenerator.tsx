@@ -17,7 +17,12 @@ import { LuSparkles, LuWandSparkles } from "react-icons/lu"
 import { generateLocalPrompt, generatePrompt, GeminiError } from "../services/geminiApi"
 import { getApiKey } from "../services/apiKeyStorage"
 import { savePromptToFirebase } from "../services/firebasePromptStore"
-import { validatePromptIdea } from "../services/promptValidation"
+import {
+  getPromptIdeaFeedback,
+  normalizeGeneratedPrompt,
+  normalizeFormDataForSave,
+  validatePromptIdea,
+} from "../services/promptValidation"
 import { addPendingRecord } from "../services/sheetRetryQueue"
 import type { HistoryEntry, NailsVideoFormState, SheetStatus } from "../types"
 import { PromptOutput } from "./PromptOutput"
@@ -141,7 +146,7 @@ export function NailsVideoGenerator({
 
   const handleGenerate = async () => {
     if (!form.coreIdea.trim() || generatingRef.current) return
-    const validationError = validatePromptIdea(form.coreIdea)
+    const validationError = validatePromptIdea(form.coreIdea, "nails_video")
     if (validationError) {
       setOutput("")
       setError(validationError)
@@ -153,7 +158,10 @@ export function NailsVideoGenerator({
     setOutput("")
     onGeneratingChange?.(true)
     try {
-      const requestData = { ...form, duration: "10s", videoRatio: "9:16", variationSeed: crypto.randomUUID() }
+      const requestData = normalizeFormDataForSave(
+        { ...form, duration: "10s", videoRatio: "9:16", variationSeed: crypto.randomUUID() },
+        "nails_video",
+      )
       const apiKey = getApiKey()
       const result = apiKey
         ? await generatePrompt("nails_video", requestData, apiKey, lastPromptRef.current).catch(async (err) => {
@@ -163,14 +171,15 @@ export function NailsVideoGenerator({
           throw err
         })
         : await generateLocalPrompt("nails_video", requestData, lastPromptRef.current)
-      setOutput(result.prompt)
+      const prompt = normalizeGeneratedPrompt(result.prompt, "nails_video")
+      setOutput(prompt)
       setGenerationId(result.generationId)
       const firebaseResult = await savePromptToFirebase({
         generationId: result.generationId,
         toolType: "nails_video",
         category: "Nails Style Video",
         coreIdea: form.coreIdea,
-        finalPrompt: result.prompt,
+        finalPrompt: prompt,
         model: result.model,
         formData: requestData,
         fallbackUsed: result.fallbackUsed,
@@ -179,13 +188,13 @@ export function NailsVideoGenerator({
       const dataError = firebaseResult.error ?? result.sheetError
       setSheetStatus(dataSaved ? "saved" : dataError ? "failed" : "pending")
       onModelUsed?.(result.model)
-      lastPromptRef.current = result.prompt
+      lastPromptRef.current = prompt
       if (!dataSaved && result.sheetError && result.generationId && result.syncToken && !result.generationId.startsWith("local_")) {
         addPendingRecord({
           generationId: result.generationId,
           toolType: "nails_video",
           formData: requestData,
-          finalPrompt: result.prompt,
+          finalPrompt: prompt,
           modelUsed: result.model,
           fallbackUsed: result.fallbackUsed ?? false,
           syncToken: result.syncToken,
@@ -199,7 +208,7 @@ export function NailsVideoGenerator({
         category: "Nails Style Video",
         format: "video",
         coreIdea: form.coreIdea,
-        prompt: result.prompt,
+        prompt,
         model: result.model,
         videoRatio: "9:16",
         duration: "10s",
@@ -227,6 +236,10 @@ export function NailsVideoGenerator({
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const ideaFeedback = form.coreIdea.trim()
+    ? getPromptIdeaFeedback(form.coreIdea, "nails_video")
+    : undefined
+
   return (
     <VStack gap="4" align="stretch">
       <MotionBox initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} p="4" borderRadius="2xl" css={{ background: "rgba(255,255,255,0.03)", borderWidth: "1px", borderColor: "rgba(236,72,153,0.18)" }}>
@@ -249,7 +262,19 @@ export function NailsVideoGenerator({
       <MotionBox initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} p="4" borderRadius="2xl" css={{ background: "rgba(255,255,255,0.03)", borderWidth: "1px", borderColor: "rgba(236,72,153,0.15)" }}>
         <Text fontWeight="semibold" color="pink.300" mb="1.5" css={{ textTransform: "uppercase", fontSize: "0.63rem" }}>Nail Video Idea / නිය වීඩියෝ අදහස *</Text>
         <Textarea placeholder="e.g. pink chrome French tip nails, art builds fast step by step, final design only at the end" value={form.coreIdea} onChange={(e) => setField("coreIdea", e.target.value)} rows={3} resize="none" css={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(236,72,153,0.3)", color: "white", _focus: { borderColor: "#ec4899", boxShadow: glowPink } }} />
-        <Text textStyle="xs" color="gray.500" mt="2">Duration fixed: 10 seconds / කාලය තත්පර 10යි</Text>
+        <HStack justify="space-between" align="center" mt="2" gap="3" flexWrap="wrap">
+          <Text textStyle="xs" color="gray.500">Duration fixed: 10 seconds / කාලය තත්පර 10යි</Text>
+          {ideaFeedback && (
+            <Text textStyle="xs" color={ideaFeedback.label === "Weak" ? "red.300" : ideaFeedback.label === "Good" ? "yellow.300" : "green.300"}>
+              Idea quality: {ideaFeedback.label} ({ideaFeedback.score}%)
+            </Text>
+          )}
+        </HStack>
+        {ideaFeedback?.label === "Weak" && (
+          <Button type="button" size="xs" mt="2" variant="ghost" onClick={() => setField("coreIdea", ideaFeedback.suggestion)} css={{ color: "pink.300", _hover: { background: "rgba(236,72,153,0.12)" } }}>
+            Improve idea suggestion
+          </Button>
+        )}
       </MotionBox>
 
       <Button type="button" w="full" size="xl" loading={loading} loadingText="Creating your nails video prompt..." onClick={handleGenerate} disabled={!form.coreIdea.trim() || loading} css={{ background: "linear-gradient(135deg, #db2777 0%, #7c3aed 55%, #0891b2 100%)", color: "white", fontWeight: "bold", minH: "56px", boxShadow: !loading ? glowPink : "none" }}>
