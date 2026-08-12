@@ -571,6 +571,7 @@ export function TattooVideoGenerator({
       >
         <motion.div whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.985 }}>
           <Button
+            type="button"
             w="full"
             size="xl"
             loading={loading}

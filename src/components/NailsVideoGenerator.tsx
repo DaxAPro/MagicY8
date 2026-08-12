@@ -252,7 +252,7 @@ export function NailsVideoGenerator({
         <Textarea placeholder="e.g. pink chrome French tip nails, art builds fast step by step, final design only at the end" value={form.coreIdea} onChange={(e) => setField("coreIdea", e.target.value)} rows={3} resize="none" css={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(236,72,153,0.3)", color: "white", _focus: { borderColor: "#ec4899", boxShadow: glowPink } }} />
       </MotionBox>
 
-      <Button w="full" size="xl" loading={loading} loadingText="Creating your nails video prompt..." onClick={handleGenerate} disabled={!form.coreIdea.trim() || loading} css={{ background: "linear-gradient(135deg, #db2777 0%, #7c3aed 55%, #0891b2 100%)", color: "white", fontWeight: "bold", minH: "56px", boxShadow: !loading ? glowPink : "none" }}>
+      <Button type="button" w="full" size="xl" loading={loading} loadingText="Creating your nails video prompt..." onClick={handleGenerate} disabled={!form.coreIdea.trim() || loading} css={{ background: "linear-gradient(135deg, #db2777 0%, #7c3aed 55%, #0891b2 100%)", color: "white", fontWeight: "bold", minH: "56px", boxShadow: !loading ? glowPink : "none" }}>
         {!loading && <HStack gap="2.5"><Icon fontSize="xl"><LuWandSparkles /></Icon><Text>Generate Nails Video Prompt / නිය prompt හදන්න</Text><Icon fontSize="xl"><LuSparkles /></Icon></HStack>}
       </Button>
 
