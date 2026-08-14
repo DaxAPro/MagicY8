@@ -33,7 +33,7 @@ export function SelectField({
   const selectedText = ACCENT_SELECTED_TEXT[accentColor]
 
   return (
-    <Box>
+    <Box minW="0">
       <Text
         fontWeight="semibold"
         color={labelColor}
@@ -52,6 +52,7 @@ export function SelectField({
         <Select.HiddenSelect />
         <Select.Control>
           <Select.Trigger
+            minW="0"
             css={{
               background: "rgba(255,255,255,0.04)",
               borderColor: border,
@@ -60,7 +61,7 @@ export function SelectField({
               _focus: { borderColor: focus, boxShadow: shadow },
             }}
           >
-            <Select.ValueText placeholder="Select..." />
+            <Select.ValueText placeholder="Select..." truncate />
           </Select.Trigger>
           <Select.IndicatorGroup>
             <Select.Indicator color={labelColor} />

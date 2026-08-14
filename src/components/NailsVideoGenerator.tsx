@@ -21,7 +21,7 @@ import {
   getPromptIdeaFeedback,
   normalizeGeneratedPrompt,
   normalizeFormDataForSave,
-  validatePromptIdea,
+  preparePromptIdeaForGeneration,
 } from "../services/promptValidation"
 import { addPendingRecord } from "../services/sheetRetryQueue"
 import type { HistoryEntry, NailsVideoFormState, SheetStatus } from "../types"
@@ -146,30 +146,22 @@ export function NailsVideoGenerator({
 
   const handleGenerate = async () => {
     if (!form.coreIdea.trim() || generatingRef.current) return
-    const validationError = validatePromptIdea(form.coreIdea, "nails_video")
-    if (validationError) {
-      setOutput("")
-      setError(validationError)
-      return
-    }
     generatingRef.current = true
     setLoading(true)
     setError("")
     setOutput("")
     onGeneratingChange?.(true)
     try {
+      const upgradedCoreIdea = preparePromptIdeaForGeneration(form.coreIdea, "nails_video")
       const requestData = normalizeFormDataForSave(
-        { ...form, duration: "10s", videoRatio: "9:16", variationSeed: crypto.randomUUID() },
+        { ...form, coreIdea: upgradedCoreIdea, duration: "10s", videoRatio: "9:16", variationSeed: crypto.randomUUID() },
         "nails_video",
       )
       const apiKey = getApiKey()
       const result = apiKey
-        ? await generatePrompt("nails_video", requestData, apiKey, lastPromptRef.current).catch(async (err) => {
-          if (err instanceof GeminiError) {
-            return generateLocalPrompt("nails_video", requestData, lastPromptRef.current)
-          }
-          throw err
-        })
+        ? await generatePrompt("nails_video", requestData, apiKey, lastPromptRef.current).catch(() =>
+          generateLocalPrompt("nails_video", requestData, lastPromptRef.current),
+        )
         : await generateLocalPrompt("nails_video", requestData, lastPromptRef.current)
       const prompt = normalizeGeneratedPrompt(result.prompt, "nails_video")
       setOutput(prompt)
@@ -186,7 +178,7 @@ export function NailsVideoGenerator({
       })
       const dataSaved = firebaseResult.saved || result.sheetSaved
       const dataError = firebaseResult.error ?? result.sheetError
-      setSheetStatus(dataSaved ? "saved" : dataError ? "failed" : "pending")
+      setSheetStatus(dataSaved ? "saved" : dataError ? "failed" : undefined)
       onModelUsed?.(result.model)
       lastPromptRef.current = prompt
       if (!dataSaved && result.sheetError && result.generationId && result.syncToken && !result.generationId.startsWith("local_")) {
@@ -207,7 +199,7 @@ export function NailsVideoGenerator({
         toolType: "nails_video",
         category: "Nails Style Video",
         format: "video",
-        coreIdea: form.coreIdea,
+        coreIdea: upgradedCoreIdea,
         prompt,
         model: result.model,
         videoRatio: "9:16",
@@ -277,8 +269,8 @@ export function NailsVideoGenerator({
         )}
       </MotionBox>
 
-      <Button type="button" w="full" size="xl" loading={loading} loadingText="Creating your nails video prompt..." onClick={handleGenerate} disabled={!form.coreIdea.trim() || loading} css={{ background: "linear-gradient(135deg, #db2777 0%, #7c3aed 55%, #0891b2 100%)", color: "white", fontWeight: "bold", minH: "56px", boxShadow: !loading ? glowPink : "none" }}>
-        {!loading && <HStack gap="2.5"><Icon fontSize="xl"><LuWandSparkles /></Icon><Text>Generate Nails Video Prompt / නිය prompt හදන්න</Text><Icon fontSize="xl"><LuSparkles /></Icon></HStack>}
+      <Button type="button" w="full" size={{ base: "lg", md: "xl" }} loading={loading} loadingText="Creating your nails video prompt..." onClick={handleGenerate} disabled={!form.coreIdea.trim() || loading} css={{ background: "linear-gradient(135deg, #db2777 0%, #7c3aed 55%, #0891b2 100%)", color: "white", fontWeight: "bold", minH: "56px", height: "auto", py: "3", boxShadow: !loading ? glowPink : "none" }}>
+        {!loading && <HStack gap="2.5" justify="center" minW="0" w="full"><Icon fontSize="xl" flexShrink={0}><LuWandSparkles /></Icon><Text whiteSpace="normal" lineHeight="1.35" textAlign="center" overflowWrap="anywhere">Generate Nails Video Prompt / නිය prompt හදන්න</Text><Icon fontSize="xl" flexShrink={0}><LuSparkles /></Icon></HStack>}
       </Button>
 
       <PromptOutput output={output} loading={loading} error={error} copied={copied} onCopy={handleCopy} accentColor="pink" title="Nails Style Video Prompt" loadingText="Creating your nails video prompt..." tags={["9:16", "10s", "Nails Style"]} sheetStatus={sheetStatus} generationId={generationId} />

@@ -24,6 +24,7 @@ import { NailsVideoGenerator } from "./components/NailsVideoGenerator"
 import { Sidebar } from "./components/Sidebar"
 import { TattooVideoGenerator } from "./components/TattooVideoGenerator"
 import { TrendingPanel } from "./components/TrendingPanel"
+import { refreshLearnedPromptMemory } from "./services/learnedPromptMemory"
 import { autoRetryPendingSaves, setupConnectivityRetry } from "./services/sheetRetryQueue"
 import type {
   HistoryEntry,
@@ -35,6 +36,7 @@ import type {
 const MotionBox = motion.create(Box)
 
 const STORAGE_KEY_HISTORY = "magy8_history"
+const MAX_HISTORY_ITEMS = 200
 
 type ActiveTool = "nails_video" | "tattoo_video"
 
@@ -84,8 +86,12 @@ export default function App() {
     STORAGE_KEY_HISTORY,
     [],
   )
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [trendingOpen, setTrendingOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(() =>
+    typeof window === "undefined" ? true : !window.matchMedia("(max-width: 1024px)").matches,
+  )
+  const [trendingOpen, setTrendingOpen] = useState(() =>
+    typeof window === "undefined" ? true : !window.matchMedia("(max-width: 1024px)").matches,
+  )
   const [activeTool, setActiveTool] = useState<ActiveTool>("nails_video")
   const [initialState, setInitialState] = useState<InitialState | undefined>()
   const [generating, setGenerating] = useState(false)
@@ -108,9 +114,15 @@ export default function App() {
     return cleanup
   }, [])
 
+  useEffect(() => {
+    refreshLearnedPromptMemory(history).catch(() => {
+      // Learning is best-effort; prompt generation must keep working without it.
+    })
+  }, [history])
+
   const handlePromptGenerated = useCallback(
     (entry: HistoryEntry) => {
-      setHistory([entry, ...history].slice(0, 50))
+      setHistory([entry, ...history].slice(0, MAX_HISTORY_ITEMS))
     },
     [history, setHistory],
   )
@@ -183,44 +195,13 @@ export default function App() {
       css={{
         background:
           "linear-gradient(135deg, #030712 0%, #080b14 50%, #020b18 100%)",
+        overflowX: "hidden",
       }}
     >
-      {/* Ambient orbs */}
-      <Box
-        position="fixed"
-        top="-20%"
-        left="5%"
-        w="500px"
-        h="500px"
-        borderRadius="full"
-        opacity={0.1}
-        pointerEvents="none"
-        zIndex={0}
-        css={{
-          background: "radial-gradient(circle, #a855f7 0%, transparent 70%)",
-          filter: "blur(80px)",
-        }}
-      />
-      <Box
-        position="fixed"
-        bottom="-10%"
-        right="5%"
-        w="450px"
-        h="450px"
-        borderRadius="full"
-        opacity={0.08}
-        pointerEvents="none"
-        zIndex={0}
-        css={{
-          background: "radial-gradient(circle, #3b82f6 0%, transparent 70%)",
-          filter: "blur(80px)",
-        }}
-      />
-
       <Flex direction="column" h="100dvh" position="relative" zIndex={1}>
         {/* ===== HEADER ===== */}
         <Box
-          px="4"
+          px={{ base: "3", md: "4" }}
           py="3"
           flexShrink={0}
           css={{
@@ -231,7 +212,7 @@ export default function App() {
         >
           <HStack justify="space-between">
             {/* Left: sidebar toggle + logo */}
-            <HStack gap="3">
+            <HStack gap={{ base: "2", md: "3" }} minW="0">
               <IconButton
                 size="sm"
                 variant="ghost"
@@ -262,8 +243,7 @@ export default function App() {
                 <Text
                   fontWeight="black"
                   css={{
-                    fontSize: "1.25rem",
-                    letterSpacing: "-0.02em",
+                    fontSize: "clamp(1rem, 1rem + 0.6vw, 1.25rem)",
                     background:
                       "linear-gradient(135deg, #c084fc 0%, #818cf8 40%, #67e8f9 100%)",
                     WebkitBackgroundClip: "text",
@@ -315,7 +295,7 @@ export default function App() {
               {/* API Status pill */}
               <HStack
                 gap="1.5"
-                px="3"
+                px={{ base: "2", sm: "3" }}
                 py="1.5"
                 borderRadius="full"
                 css={{
@@ -394,7 +374,7 @@ export default function App() {
 
         {/* ===== TOOL TABS ===== */}
         <Box
-          px="4"
+          px={{ base: "2", md: "4" }}
           py="2"
           flexShrink={0}
           css={{
@@ -410,7 +390,7 @@ export default function App() {
             }}
             variant="plain"
           >
-            <Tabs.List gap="2">
+            <Tabs.List gap="2" overflowX="auto" maxW="100%" css={{ scrollbarWidth: "none" }}>
               <Tabs.Trigger
                 value="nails_video"
                 css={{
@@ -418,8 +398,9 @@ export default function App() {
                   fontSize: "0.8rem",
                   fontWeight: "semibold",
                   color: "gray.500",
-                  px: "4",
+                  px: "3",
                   py: "2",
+                  flexShrink: 0,
                   _selected: {
                     color: "purple.300",
                     background: "rgba(168,85,247,0.12)",
@@ -440,8 +421,9 @@ export default function App() {
                   fontSize: "0.8rem",
                   fontWeight: "semibold",
                   color: "gray.500",
-                  px: "4",
+                  px: "3",
                   py: "2",
+                  flexShrink: 0,
                   _selected: {
                     color: "orange.300",
                     background: "rgba(249,115,22,0.12)",
@@ -460,7 +442,7 @@ export default function App() {
         </Box>
 
         {/* ===== MAIN CONTENT ===== */}
-        <Flex flex="1" overflow="hidden">
+        <Flex flex="1" overflow="hidden" minW="0">
           {/* Left Sidebar */}
           <AnimatePresence initial={false}>
             {sidebarOpen && (
@@ -488,8 +470,9 @@ export default function App() {
           {/* Center Workspace */}
           <Box
             flex="1"
+            minW="0"
             overflow="auto"
-            p="5"
+            p={{ base: "3", md: "5" }}
             css={{
               borderLeft: sidebarOpen
                 ? "1px solid rgba(255,255,255,0.05)"

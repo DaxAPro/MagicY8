@@ -1,8 +1,8 @@
 import type { ToolType } from "../types";
 import {
+  isPromptIdeaSavable,
   normalizeFormDataForSave,
   normalizeGeneratedPrompt,
-  validatePromptIdea,
 } from "./promptValidation";
 
 type FirebaseApp = import("firebase/app").FirebaseApp;
@@ -41,9 +41,8 @@ export interface PromptStorePayload {
 export async function savePromptToFirebase(
   payload: PromptStorePayload,
 ): Promise<{ saved: boolean; skipped?: boolean; error?: string }> {
-  const validationError = validatePromptIdea(payload.coreIdea, payload.toolType);
-  if (validationError) {
-    return { saved: false, skipped: true, error: "Skipped invalid prompt data." };
+  if (!isPromptIdeaSavable(payload.coreIdea, payload.toolType)) {
+    return { saved: false, skipped: true };
   }
 
   const firebaseApp = await createFirebaseApp();

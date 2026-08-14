@@ -157,8 +157,8 @@ export function PromptOutput({
                 : "0 8px 32px rgba(0,0,0,0.4)",
             }}
           >
-            <HStack justify="space-between" mb="4">
-              <HStack gap="2">
+            <HStack justify="space-between" mb="4" gap="3" align="flex-start">
+              <HStack gap="2" minW="0">
                 <motion.div
                   animate={output ? { rotate: [0, 360] } : {}}
                   // @ts-expect-error framer-motion types
@@ -170,6 +170,8 @@ export function PromptOutput({
                   fontWeight="bold"
                   color={a.text}
                   letterSpacing="widest"
+                  whiteSpace="normal"
+                  overflowWrap="anywhere"
                   css={{ textTransform: "uppercase", fontSize: "0.63rem" }}
                 >
                   {title}
@@ -242,6 +244,7 @@ export function PromptOutput({
                         padding: "1.25rem",
                         borderRadius: "0.875rem",
                         borderLeft: `3px solid ${a.border}`,
+                        overflowWrap: "anywhere",
                       }}
                     >
                       {output}
@@ -292,8 +295,8 @@ export function PromptOutput({
                                 : "rgba(239,68,68,0.2)",
                         }}
                       >
-                        <HStack gap="2" justify="space-between">
-                          <HStack gap="2">
+                        <HStack gap="2" justify="space-between" align="flex-start">
+                          <HStack gap="2" minW="0">
                             <Icon
                               color={
                                 effectiveStatus === "saved"
@@ -315,6 +318,7 @@ export function PromptOutput({
                             <Text
                               textStyle="xs"
                               fontWeight="medium"
+                              overflowWrap="anywhere"
                               color={
                                 effectiveStatus === "saved"
                                   ? "green.300"
@@ -379,11 +383,11 @@ export function PromptOutput({
                           _hover: { background: a.hover, boxShadow: a.glow },
                         }}
                       >
-                        <HStack gap="2">
+                        <HStack gap="2" justify="center" minW="0">
                           <Icon fontSize="md">
                             {copied ? <LuCheck /> : <LuClipboardCopy />}
                           </Icon>
-                          <Text>
+                          <Text whiteSpace="normal" textAlign="center" overflowWrap="anywhere">
                             {copied ? "Copied to clipboard!" : "Copy Prompt to Clipboard"}
                           </Text>
                         </HStack>

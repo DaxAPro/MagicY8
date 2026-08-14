@@ -1,4 +1,5 @@
 import type { ToolType } from "./geminiApi";
+import { getLearnedPromptMemory } from "./learnedPromptMemory";
 
 export interface LocalTrendIdea {
   title: string;
@@ -76,8 +77,15 @@ function chooseVariant(seedText: string, previousPrompt?: string): number {
   return score % 6;
 }
 
+function cleanIdea(value: unknown, fallback: string): string {
+  const idea = String(value ?? "").trim().replace(/\s+/g, " ");
+  return idea.length > 0 ? idea : fallback;
+}
+
 export function getLocalTrends(toolType: ToolType): LocalTrendIdea[] {
-  return toolType === "tattoo_video" ? LOCAL_TATTOO_TRENDS : LOCAL_NAIL_TRENDS;
+  const learnedTrends = getLearnedPromptMemory()[toolType].trends;
+  const builtInTrends = toolType === "tattoo_video" ? LOCAL_TATTOO_TRENDS : LOCAL_NAIL_TRENDS;
+  return [...learnedTrends, ...builtInTrends].slice(0, 12);
 }
 
 export function buildBrowserLocalPrompt(
@@ -91,7 +99,7 @@ export function buildBrowserLocalPrompt(
 }
 
 function buildNailsPrompt(data: Record<string, unknown>, previousPrompt?: string): string {
-  const coreIdea = String(data.coreIdea ?? "").trim();
+  const coreIdea = cleanIdea(data.coreIdea, "pink chrome French tip nails with glossy pearl highlights");
   const duration = "10s";
   const nailStyle = String(data.nailStyle ?? "Glossy chrome");
   const nailShape = String(data.nailShape ?? "Almond");
@@ -101,7 +109,9 @@ function buildNailsPrompt(data: Record<string, unknown>, previousPrompt?: string
   const processStyle = String(data.revealStyle ?? "mystery_macro_build");
   const colorMode = String(data.colorMode ?? "soft_pastel");
   const variant = chooseVariant(coreIdea + nailStyle + nailColor, previousPrompt);
-  const trend = LOCAL_NAIL_TRENDS[variant] ?? LOCAL_NAIL_TRENDS[0];
+  const trends = getLocalTrends("nails_video");
+  const trend = trends[variant % trends.length] ?? LOCAL_NAIL_TRENDS[0];
+  const learnedSnippet = getLearnedPromptMemory().nails_video.promptSnippets[variant];
   const hooks = [
     "Start with extreme macro fragments of one clean adult fingernail: a tiny highlight, a cropped brush tip, and glossy texture only, so the final design cannot be guessed.",
     "Open on a tight texture close-up of wet gel reflecting salon lights, with the brush entering frame before any full pattern is visible.",
@@ -119,11 +129,23 @@ function buildNailsPrompt(data: Record<string, unknown>, previousPrompt?: string
     "Let the final pattern connect only during the last 1.5 seconds, then hold a sharp social-media thumbnail frame.",
   ];
 
-  return `A 9:16 vertical ${duration} AI video prompt for Google Flow. ${hooks[variant]} Create ${nailStyle} on a ${nailShape} nail using ${nailColor}. Core idea: ${coreIdea}. Trend reference: adapt the current ${trend.title} direction as a subtle style influence, while preserving the user's exact concept. Video style: ${processStyleInstruction("nails_video", processStyle)} Color mode: ${colorModeInstruction("nails_video", colorMode)} Camera: ${camera}; lighting: ${lighting}. ${buildBeats[variant]} Show only one stable adult finger and one nail; avoid full hands, extra fingers, warped cuticles, changing nail length, messy failure looks, random scribbles, wipe-away tricks, captions, logos, and watermarks. The final 1.5-2 seconds must be the first clean full finished nail-art hero view, sharp, glossy, centered, and fully inside the frame.`;
+  return [
+    `A 9:16 vertical ${duration} AI video prompt for Google Flow.`,
+    `Main concept: ${coreIdea}.`,
+    `Scene: create ${nailStyle} on a ${nailShape} nail using ${nailColor}; adapt the ${trend.title} trend only as a subtle influence.`,
+    learnedSnippet ? `Learned quality pattern: borrow pacing and clarity from this saved style: ${learnedSnippet}` : "",
+    `Opening hook: ${hooks[variant]}`,
+    `Video style: ${processStyleInstruction("nails_video", processStyle)}.`,
+    `Color direction: ${colorModeInstruction("nails_video", colorMode)}`,
+    `Camera and light: ${camera}; ${lighting}; shallow depth of field, beauty-commercial macro texture, stable composition.`,
+    `Timeline: ${buildBeats[variant]}`,
+    `Final frame: the last 1.5-2 seconds must be the first clean full finished nail-art hero view, sharp, glossy, centered, and fully inside the frame.`,
+    "Avoid: full hands, extra fingers, warped cuticles, changing nail length, messy failure looks, random scribbles, early full reveal, captions, logos, and watermarks.",
+  ].join(" ");
 }
 
 function buildTattooPrompt(data: Record<string, unknown>, previousPrompt?: string): string {
-  const coreIdea = String(data.coreIdea ?? "").trim();
+  const coreIdea = cleanIdea(data.coreIdea, "fine-line rose tattoo with black and grey botanical shading on the outer forearm");
   const tattooStyle = String(data.tattooStyle ?? "Realistic");
   const bodyPart = String(data.bodyPartDescription ?? data.bodyPartLabel ?? data.bodyPart ?? "the outer forearm");
   const inkStyle = String(data.inkStyle ?? "Black ink");
@@ -133,7 +155,9 @@ function buildTattooPrompt(data: Record<string, unknown>, previousPrompt?: strin
   const processStyle = String(data.revealStyle ?? "mystery_macro_build");
   const colorMode = String(data.colorMode ?? "black_grey");
   const variant = chooseVariant(coreIdea + tattooStyle + bodyPart, previousPrompt);
-  const trend = LOCAL_TATTOO_TRENDS[variant] ?? LOCAL_TATTOO_TRENDS[0];
+  const trends = getLocalTrends("tattoo_video");
+  const trend = trends[variant % trends.length] ?? LOCAL_TATTOO_TRENDS[0];
+  const learnedSnippet = getLearnedPromptMemory().tattoo_video.promptSnippets[variant];
   const hooks = [
     "Start with extreme macro fragments: a needle tip, a partial curved line, skin texture, and a tiny stencil section only, so the final tattoo subject cannot be identified.",
     "Open on cropped ink texture and gloved-hand movement across one selected body part, showing progress without revealing the full stencil.",
@@ -151,5 +175,18 @@ function buildTattooPrompt(data: Record<string, unknown>, previousPrompt?: strin
     "End with an unobstructed, sharp, fully framed finished tattoo suitable as a vertical social-media thumbnail.",
   ];
 
-  return `A 9:16 vertical 10-second AI video prompt for Google Flow. ${hooks[variant]} Subject: glamorous ${subjectGender}, tasteful non-explicit styling, natural skin texture, stable anatomy. Tattoo concept: ${coreIdea}. Placement: ${bodyPart}. Style: ${tattooStyle}; ink: ${inkStyle}. Trend reference: adapt the current ${trend.title} direction as a subtle style influence, while preserving the user's exact concept. Video style: ${processStyleInstruction("tattoo_video", processStyle)} Color mode: ${colorModeInstruction("tattoo_video", colorMode)} Camera: ${camera}; lighting: ${lighting}. ${buildBeats[variant]} Avoid full body framing, extra fingers, duplicated hands, warped limbs, rubber skin, excessive blood, nudity, captions, logos, watermarks, AI morphing, and any full tattoo or full stencil visible at the start. The final two seconds must be the first complete finished-art hero view, unobstructed and fully inside the frame.`;
+  return [
+    "A 9:16 vertical 10-second AI video prompt for Google Flow.",
+    `Tattoo concept: ${coreIdea}.`,
+    `Subject and placement: ${subjectGender}, tasteful non-explicit styling, natural skin texture, stable anatomy; place the design on ${bodyPart}.`,
+    `Style: ${tattooStyle}; ink: ${inkStyle}; adapt the ${trend.title} trend only as a subtle influence.`,
+    learnedSnippet ? `Learned quality pattern: borrow pacing and clarity from this saved style: ${learnedSnippet}` : "",
+    `Opening hook: ${hooks[variant]}`,
+    `Video style: ${processStyleInstruction("tattoo_video", processStyle)}.`,
+    `Color direction: ${colorModeInstruction("tattoo_video", colorMode)}`,
+    `Camera and light: ${camera}; ${lighting}; premium studio macro, realistic tool movement, consistent tattoo placement.`,
+    `Timeline: ${buildBeats[variant]}`,
+    "Final frame: the final two seconds must be the first complete finished-art hero view, unobstructed, sharp, and fully inside the frame.",
+    "Avoid: full body framing, extra fingers, duplicated hands, warped limbs, rubber skin, excessive blood, nudity, early full stencil reveal, captions, logos, watermarks, and AI morphing.",
+  ].join(" ");
 }

@@ -1,4 +1,5 @@
 import type { ToolType } from "../types";
+import { getLearnedPromptMemory } from "./learnedPromptMemory";
 
 const NAIL_TERMS = new Set([
   "almond",
@@ -76,6 +77,29 @@ const GENERIC_ONLY_TERMS = new Set([
 
 const MEANINGFUL_TERMS = new Set([...NAIL_TERMS, ...TATTOO_TERMS, ...VISUAL_TERMS]);
 
+const IDEA_EXPANSIONS: Record<ToolType, Record<string, string>> = {
+  nails_video: {
+    aura: "soft pink aura nails with glossy airbrushed glow and pearl highlights",
+    butterfly: "soft pastel butterfly nail art with chrome accents and glossy macro reveal",
+    chrome: "pink chrome French tip nails with mirror shine and pearl highlights",
+    dragon: "tiny chrome dragon accent nail art with black gel linework and glossy final reveal",
+    flower: "delicate rose flower nail art with pearl pink gel polish and clean glossy finish",
+    heart: "pink heart accent nails with chrome outline and soft beauty lighting",
+    rose: "rose flower nail art with pearl pink chrome details and glossy salon finish",
+    star: "silver star accent nails with soft pastel polish and glossy macro reveal",
+  },
+  tattoo_video: {
+    aura: "minimal aura-inspired ornamental tattoo with soft black and grey shading on the outer forearm",
+    butterfly: "fine-line butterfly tattoo with delicate black and grey shading on the outer forearm",
+    chrome: "futuristic chrome-effect cyber sigil tattoo with black and grey linework on the outer forearm",
+    dragon: "minimal blackwork dragon tattoo wrapping around the outer forearm with cinematic macro reveal",
+    flower: "fine-line rose flower tattoo with botanical leaves on the outer forearm",
+    heart: "minimal fine-line heart tattoo with subtle ornamental details on the wrist",
+    rose: "fine-line rose tattoo with black and grey botanical shading on the outer forearm",
+    star: "minimal constellation star tattoo with fine-line dots and clean black ink",
+  },
+};
+
 export interface PromptIdeaFeedback {
   score: number;
   label: "Weak" | "Good" | "Strong";
@@ -86,13 +110,14 @@ export interface PromptIdeaFeedback {
 function normalizedWords(input: string): string[] {
   return input
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
     .split(/\s+/)
     .map((word) => word.replace(/^-+|-+$/g, ""))
     .filter(Boolean);
 }
 
 function looksLikeRandomToken(word: string): boolean {
+  if (!/^[a-z0-9-]+$/i.test(word)) return false;
   if (word.length < 5) return false;
   const letters = word.replace(/[^a-z]/g, "");
   if (letters.length < 5) return false;
@@ -103,8 +128,8 @@ function looksLikeRandomToken(word: string): boolean {
   return !hasKnownChunk && (vowelRatio < 0.24 || vowelRatio > 0.62 || repeatedPair);
 }
 
-function hasAny(words: string[], terms: Set<string>): boolean {
-  return words.some((word) => terms.has(word));
+function hasNonLatinText(input: string): boolean {
+  return [...input].some((char) => char.charCodeAt(0) > 127);
 }
 
 export function getPromptIdeaFeedback(input: string, toolType: ToolType): PromptIdeaFeedback {
@@ -146,6 +171,13 @@ export function improvePromptIdea(input: string, toolType: ToolType): string {
       : "minimal blackwork dragon tattoo around the outer forearm";
   if (!trimmed || normalizedWords(trimmed).some(looksLikeRandomToken)) return fallback;
 
+  const words = normalizedWords(trimmed);
+  const learnedExpansion = getLearnedPromptMemory()[toolType].expansions[words[0] ?? ""];
+  if (words.length <= 2 && learnedExpansion) return learnedExpansion;
+
+  const expansion = IDEA_EXPANSIONS[toolType][words.join(" ")] ?? IDEA_EXPANSIONS[toolType][words[0] ?? ""];
+  if (words.length <= 2 && expansion) return expansion;
+
   const suffix =
     toolType === "nails_video"
       ? "with glossy macro reveal and clean final hero shot"
@@ -153,13 +185,38 @@ export function improvePromptIdea(input: string, toolType: ToolType): string {
   return `${trimmed} ${suffix}`.replace(/\s+/g, " ").trim();
 }
 
+export function preparePromptIdeaForGeneration(input: string, toolType: ToolType): string {
+  const trimmed = input.trim();
+  if (!trimmed) return improvePromptIdea("", toolType);
+
+  const feedback = getPromptIdeaFeedback(trimmed, toolType);
+  if (feedback.label === "Strong") return trimmed;
+  return feedback.suggestion;
+}
+
+export function isPromptIdeaSavable(input: string, toolType: ToolType): boolean {
+  void toolType;
+  const trimmed = input.trim();
+  if (trimmed.length < 6) return false;
+
+  const words = normalizedWords(trimmed);
+  if (words.length < 2) return false;
+  if (words.some(looksLikeRandomToken)) return false;
+  if (words.every((word) => GENERIC_ONLY_TERMS.has(word))) return false;
+
+  const usefulWords = words.filter((word) => MEANINGFUL_TERMS.has(word));
+  if (usefulWords.length > 0) return true;
+
+  return hasNonLatinText(trimmed) && trimmed.length >= 8;
+}
+
 export function validatePromptIdea(input: string, toolType: ToolType): string | null {
+  void toolType;
   const trimmed = input.trim();
   if (!trimmed) return "Real design idea එකක් type කරන්න.";
   if (trimmed.length < 4) return "Idea එක කෙටි වැඩියි. Real design words කිහිපයක් දාන්න.";
 
   const words = normalizedWords(trimmed);
-  if (words.length === 0) return "Normal words වලින් idea එක type කරන්න.";
   if (words.some(looksLikeRandomToken)) {
     return "මේක random text වගේ. Real design idea එකක් type කරන්න, e.g. pink chrome French tips.";
   }
@@ -169,24 +226,10 @@ export function validatePromptIdea(input: string, toolType: ToolType): string | 
     return "මේක random text වගේ. Real design idea එකක් type කරන්න, e.g. pink chrome French tips.";
   }
 
-  const nailDomain = hasAny(words, NAIL_TERMS);
-  const tattooDomain = hasAny(words, TATTOO_TERMS);
-  if (toolType === "nails_video" && tattooDomain && !nailDomain) {
-    return "මේක tattoo idea එකක් වගේ. Tattoo tab එක use කරන්න.";
-  }
-  if (toolType === "tattoo_video" && nailDomain && !tattooDomain) {
-    return "මේක nails idea එකක් වගේ. Nails tab එක use කරන්න.";
-  }
-
   const usefulWords = words.filter((word) => MEANINGFUL_TERMS.has(word));
   const onlyGeneric = words.every((word) => GENERIC_ONLY_TERMS.has(word));
   if (onlyGeneric || usefulWords.length === 0) {
-    return "Idea එක vague වැඩියි. Color/style/subject එකක් දාන්න.";
-  }
-
-  const feedback = getPromptIdeaFeedback(trimmed, toolType);
-  if (feedback.score < 35) {
-    return `Idea එක තව clear කරන්න. Try: ${feedback.suggestion}`;
+    return null;
   }
 
   return null;
