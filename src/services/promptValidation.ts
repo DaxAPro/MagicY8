@@ -197,15 +197,15 @@ export function preparePromptIdeaForGeneration(input: string, toolType: ToolType
 export function isPromptIdeaSavable(input: string, toolType: ToolType): boolean {
   void toolType;
   const trimmed = input.trim();
-  if (trimmed.length < 6) return false;
-
   const words = normalizedWords(trimmed);
-  if (words.length < 2) return false;
   if (words.some(looksLikeRandomToken)) return false;
   if (words.every((word) => GENERIC_ONLY_TERMS.has(word))) return false;
 
   const usefulWords = words.filter((word) => MEANINGFUL_TERMS.has(word));
   if (usefulWords.length > 0) return true;
+
+  if (trimmed.length < 6) return false;
+  if (words.length < 2) return false;
 
   return hasNonLatinText(trimmed) && trimmed.length >= 8;
 }
