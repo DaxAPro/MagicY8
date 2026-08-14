@@ -41,14 +41,14 @@ export interface PromptStorePayload {
 export async function savePromptToFirebase(
   payload: PromptStorePayload,
 ): Promise<{ saved: boolean; skipped?: boolean; error?: string }> {
-  if (!isPromptIdeaSavable(payload.coreIdea, payload.toolType)) {
-    return { saved: false, skipped: true };
-  }
-
-  const firebaseApp = await createFirebaseApp();
-  if (!firebaseApp) return { saved: false, skipped: true };
-
   try {
+    if (!isPromptIdeaSavable(payload.coreIdea, payload.toolType)) {
+      return { saved: false, skipped: true };
+    }
+
+    const firebaseApp = await createFirebaseApp();
+    if (!firebaseApp) return { saved: false, skipped: true };
+
     const { addDoc, collection, getFirestore, serverTimestamp } = await import("firebase/firestore");
     const db = getFirestore(firebaseApp);
     const formData = normalizeFormDataForSave(payload.formData, payload.toolType);

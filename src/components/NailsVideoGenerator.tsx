@@ -23,6 +23,7 @@ import {
   normalizeFormDataForSave,
   preparePromptIdeaForGeneration,
 } from "../services/promptValidation"
+import { safeRandomId } from "../services/id"
 import { addPendingRecord } from "../services/sheetRetryQueue"
 import type { HistoryEntry, NailsVideoFormState, SheetStatus } from "../types"
 import { PromptOutput } from "./PromptOutput"
@@ -154,7 +155,7 @@ export function NailsVideoGenerator({
     try {
       const upgradedCoreIdea = preparePromptIdeaForGeneration(form.coreIdea, "nails_video")
       const requestData = normalizeFormDataForSave(
-        { ...form, coreIdea: upgradedCoreIdea, duration: "10s", videoRatio: "9:16", variationSeed: crypto.randomUUID() },
+        { ...form, coreIdea: upgradedCoreIdea, duration: "10s", videoRatio: "9:16", variationSeed: safeRandomId("variation") },
         "nails_video",
       )
       const apiKey = getApiKey()
@@ -194,7 +195,7 @@ export function NailsVideoGenerator({
         })
       }
       onPromptGenerated({
-        id: crypto.randomUUID(),
+        id: safeRandomId("history"),
         timestamp: Date.now(),
         toolType: "nails_video",
         category: "Nails Style Video",

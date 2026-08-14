@@ -1,5 +1,6 @@
 import type { ToolType } from "../types";
 import { getGoogleSheetConfig } from "./googleSheetConfig";
+import { safeShortId } from "./id";
 
 interface DirectSheetPayload {
   generationId?: string;
@@ -26,7 +27,7 @@ export async function savePromptDirectToGoogleSheets(
 
   const generationId = payload.generationId?.startsWith("local_")
     ? `gen_${payload.generationId.slice(6).replace(/[^a-z0-9_]/gi, "_")}`
-    : payload.generationId ?? `gen_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+    : payload.generationId ?? `gen_${Date.now()}_${safeShortId("sheet")}`;
 
   const body = {
     action: "save_prompt",

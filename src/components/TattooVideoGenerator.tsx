@@ -18,6 +18,7 @@ import { LuPenTool, LuVideo } from "react-icons/lu"
 import { getApiKey } from "../services/apiKeyStorage"
 import { savePromptToFirebase } from "../services/firebasePromptStore"
 import { GeminiError, generateLocalPrompt, generatePrompt } from "../services/geminiApi"
+import { safeRandomId } from "../services/id"
 import { getPromptIdeaFeedback, preparePromptIdeaForGeneration } from "../services/promptValidation"
 import { addPendingRecord } from "../services/sheetRetryQueue"
 import type { HistoryEntry, SheetStatus, TattooVideoFormState } from "../types"
@@ -199,7 +200,7 @@ export function TattooVideoGenerator({
         aspectRatio: fixedVerticalAspectRatio,
         bodyPartLabel,
         bodyPartDescription,
-        variationSeed: crypto.randomUUID(),
+        variationSeed: safeRandomId("variation"),
       }
       const apiKey = getApiKey()
       const result = apiKey
@@ -242,7 +243,7 @@ export function TattooVideoGenerator({
       }
 
       onPromptGenerated({
-        id: crypto.randomUUID(),
+        id: safeRandomId("history"),
         timestamp: Date.now(),
         toolType: "tattoo_video",
         category: "Tattoo Video",

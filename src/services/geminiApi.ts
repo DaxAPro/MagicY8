@@ -1,4 +1,5 @@
 import { buildBrowserLocalPrompt, getLocalTrends } from "./localPromptEngine";
+import { safeShortId } from "./id";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -144,7 +145,7 @@ export async function generateLocalPrompt(
       prompt: buildBrowserLocalPrompt(toolType, formData, previousPrompt),
       model: "Browser free prompt engine",
       fallbackUsed: true,
-      generationId: `local_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`,
+      generationId: `local_${Date.now()}_${safeShortId("run")}`,
       sheetSaved: false,
     };
   }
@@ -157,7 +158,7 @@ export async function generateLocalPrompt(
     prompt: buildBrowserLocalPrompt(toolType, formData, previousPrompt),
     model: "Browser free prompt engine",
     fallbackUsed: true,
-    generationId: `local_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`,
+    generationId: `local_${Date.now()}_${safeShortId("run")}`,
     sheetSaved: false,
   }));
   if (!result.prompt || typeof result.prompt !== "string") {
