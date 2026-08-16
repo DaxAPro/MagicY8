@@ -130,17 +130,18 @@ function buildNailsPrompt(data: Record<string, unknown>, previousPrompt?: string
   ];
 
   return [
-    `A 9:16 vertical ${duration} AI video prompt for Google Flow.`,
+    `A premium 9:16 vertical ${duration} AI video prompt for Google Flow, Veo, Sora, Runway, or Kling.`,
     `Main concept: ${coreIdea}.`,
-    `Scene: create ${nailStyle} on a ${nailShape} nail using ${nailColor}; adapt the ${trend.title} trend only as a subtle influence.`,
-    learnedSnippet ? `Learned quality pattern: borrow pacing and clarity from this saved style: ${learnedSnippet}` : "",
-    `Opening hook: ${hooks[variant]}`,
-    `Video style: ${processStyleInstruction("nails_video", processStyle)}.`,
-    `Color direction: ${colorModeInstruction("nails_video", colorMode)}`,
-    `Camera and light: ${camera}; ${lighting}; shallow depth of field, beauty-commercial macro texture, stable composition.`,
-    `Timeline: ${buildBeats[variant]}`,
-    `Final frame: the last 1.5-2 seconds must be the first clean full finished nail-art hero view, sharp, glossy, centered, and fully inside the frame.`,
-    "Avoid: full hands, extra fingers, warped cuticles, changing nail length, messy failure looks, random scribbles, early full reveal, captions, logos, and watermarks.",
+    `Creative direction: make a luxury salon macro reveal of ${nailStyle} on a ${nailShape} nail using ${nailColor}; use ${trend.title} only as a refined trend influence, not as a copied template.`,
+    learnedSnippet ? `Learned quality pattern: borrow pacing, clarity, and final-frame discipline from this saved style: ${learnedSnippet}` : "",
+    `Opening hook: ${hooks[variant]}` ,
+    `Process rule: ${processStyleInstruction("nails_video", processStyle)}. Show real nail-tool cause and effect: brush contact, gel thickness, chrome reflection, glitter placement, top-coat shine, and clean curing-like finish.`,
+    `Color direction: ${colorModeInstruction("nails_video", colorMode)} Keep the palette intentional, premium, and consistent across every frame.`,
+    `Camera and light: ${camera}; ${lighting}; shallow depth of field, stable hand framing, glossy beauty-commercial texture, crisp highlights, no shaky drift.`,
+    `Timeline: ${buildBeats[variant]} Use a curiosity hook in the first second, satisfying progress in the middle, and one clean reveal at the end.`,
+    `Final frame: the last 1.5-2 seconds must be the first clean full finished nail-art hero view, sharp, glossy, centered, fully inside the frame, thumbnail-ready, no text overlay.`,
+    "Quality guardrails: preserve the same nail shape, same finger count, same color palette, and same design geometry from start to finish.",
+    "Avoid: full hands unless necessary, extra fingers, warped cuticles, changing nail length, melted polish, messy failure looks, random scribbles, early full reveal, captions, logos, watermarks, blur, flicker, and AI morphing.",
   ].join(" ");
 }
 
@@ -176,17 +177,18 @@ function buildTattooPrompt(data: Record<string, unknown>, previousPrompt?: strin
   ];
 
   return [
-    "A 9:16 vertical 10-second AI video prompt for Google Flow.",
+    "A premium 9:16 vertical 10-second AI video prompt for Google Flow, Veo, Sora, Runway, or Kling.",
     `Tattoo concept: ${coreIdea}.`,
-    `Subject and placement: ${subjectGender}, tasteful non-explicit styling, natural skin texture, stable anatomy; place the design on ${bodyPart}.`,
-    `Style: ${tattooStyle}; ink: ${inkStyle}; adapt the ${trend.title} trend only as a subtle influence.`,
-    learnedSnippet ? `Learned quality pattern: borrow pacing and clarity from this saved style: ${learnedSnippet}` : "",
-    `Opening hook: ${hooks[variant]}`,
-    `Video style: ${processStyleInstruction("tattoo_video", processStyle)}.`,
-    `Color direction: ${colorModeInstruction("tattoo_video", colorMode)}`,
-    `Camera and light: ${camera}; ${lighting}; premium studio macro, realistic tool movement, consistent tattoo placement.`,
-    `Timeline: ${buildBeats[variant]}`,
-    "Final frame: the final two seconds must be the first complete finished-art hero view, unobstructed, sharp, and fully inside the frame.",
-    "Avoid: full body framing, extra fingers, duplicated hands, warped limbs, rubber skin, excessive blood, nudity, early full stencil reveal, captions, logos, watermarks, and AI morphing.",
+    `Subject and placement: ${subjectGender}, tasteful non-explicit styling, natural skin texture, stable anatomy; place the design only on ${bodyPart}.`,
+    `Creative direction: ${tattooStyle} tattoo process with ${inkStyle}; use ${trend.title} only as a refined influence, not as a copied template.`,
+    learnedSnippet ? `Learned quality pattern: borrow pacing, clarity, and final-frame discipline from this saved style: ${learnedSnippet}` : "",
+    `Opening hook: ${hooks[variant]}` ,
+    `Process rule: ${processStyleInstruction("tattoo_video", processStyle)}. Show believable tattoo-tool cause and effect: stencil fragment, needle pass, clean linework, controlled shading, ink settling, and skin-safe professional wiping.`,
+    `Color direction: ${colorModeInstruction("tattoo_video", colorMode)} Keep ink values consistent and premium across every frame.`,
+    `Camera and light: ${camera}; ${lighting}; premium studio macro, realistic tool movement, consistent placement, shallow depth of field, no shaky drift.`,
+    `Timeline: ${buildBeats[variant]} Use a curiosity hook in the first second, satisfying progress in the middle, and one clean reveal at the end.`,
+    "Final frame: the final two seconds must be the first complete finished-art hero view, unobstructed, sharp, centered, fully inside the frame, thumbnail-ready, no text overlay.",
+    "Quality guardrails: preserve the same body part, same tattoo scale, same stencil geometry, same ink palette, and natural skin texture from start to finish.",
+    "Avoid: full body framing, extra fingers, duplicated hands, warped limbs, rubber skin, excessive blood, nudity, unsafe needle behavior, early full stencil reveal, captions, logos, watermarks, blur, flicker, and AI morphing.",
   ].join(" ");
 }

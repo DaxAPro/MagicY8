@@ -2,7 +2,7 @@
 
 import { Box, Button, HStack, Icon, IconButton, Spinner, Text, VStack } from "@chakra-ui/react"
 import { AnimatePresence, motion } from "framer-motion"
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { LuCheck, LuClipboardCopy, LuRefreshCw, LuTriangleAlert, LuZap } from "react-icons/lu"
 import { retrySingleRecord } from "../services/sheetRetryQueue"
 import type { SheetStatus } from "../types"
@@ -82,6 +82,10 @@ export function PromptOutput({
   const a = ACCENT[accentColor]
   const [retrying, setRetrying] = useState(false)
   const [localSheetStatus, setLocalSheetStatus] = useState<SheetStatus | undefined>(sheetStatus)
+
+  useEffect(() => {
+    setLocalSheetStatus(sheetStatus)
+  }, [generationId, sheetStatus])
 
   const effectiveStatus = localSheetStatus ?? sheetStatus
 

@@ -92,6 +92,9 @@ export default function App() {
   const [trendingOpen, setTrendingOpen] = useState(() =>
     typeof window === "undefined" ? true : !window.matchMedia("(max-width: 1024px)").matches,
   )
+  const [isCompactLayout, setIsCompactLayout] = useState(() =>
+    typeof window === "undefined" ? false : window.matchMedia("(max-width: 1024px)").matches,
+  )
   const [activeTool, setActiveTool] = useState<ActiveTool>("nails_video")
   const [initialState, setInitialState] = useState<InitialState | undefined>()
   const [generating, setGenerating] = useState(false)
@@ -173,11 +176,37 @@ export default function App() {
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 1024px)")
-    if (mq.matches) {
-      setSidebarOpen(false)
-      setTrendingOpen(false)
+    const syncLayout = () => {
+      const compact = mq.matches
+      setIsCompactLayout(compact)
+      if (compact) {
+        setSidebarOpen(false)
+        setTrendingOpen(false)
+      } else {
+        setSidebarOpen(true)
+        setTrendingOpen(true)
+      }
     }
+    syncLayout()
+    mq.addEventListener("change", syncLayout)
+    return () => mq.removeEventListener("change", syncLayout)
   }, [])
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen((open) => {
+      const next = !open
+      if (next && isCompactLayout) setTrendingOpen(false)
+      return next
+    })
+  }, [isCompactLayout])
+
+  const toggleTrending = useCallback(() => {
+    setTrendingOpen((open) => {
+      const next = !open
+      if (next && isCompactLayout) setSidebarOpen(false)
+      return next
+    })
+  }, [isCompactLayout])
 
   // Sync active tool when initialState changes
   useEffect(() => {
@@ -190,7 +219,7 @@ export default function App() {
 
   return (
     <Box
-      minH="100dvh"
+      minH="100svh"
       position="relative"
       css={{
         background:
@@ -198,7 +227,7 @@ export default function App() {
         overflowX: "hidden",
       }}
     >
-      <Flex direction="column" h="100dvh" position="relative" zIndex={1}>
+      <Flex direction="column" h="100svh" minH="0" position="relative" zIndex={1}>
         {/* ===== HEADER ===== */}
         <Box
           px={{ base: "3", md: "4" }}
@@ -217,7 +246,7 @@ export default function App() {
                 size="sm"
                 variant="ghost"
                 aria-label="Toggle sidebar"
-                onClick={() => setSidebarOpen((v) => !v)}
+                onClick={toggleSidebar}
                 css={{
                   color: "gray.500",
                   borderRadius: "lg",
@@ -286,7 +315,7 @@ export default function App() {
                   textTransform: "uppercase",
                 }}
               >
-                Powered by Groq
+                Firebase Ready
               </Box>
             </HStack>
 
@@ -320,7 +349,7 @@ export default function App() {
                   fontWeight="medium"
                   display={{ base: "none", sm: "block" }}
                 >
-                  Groq API
+                  Firebase Sync
                 </Text>
               </HStack>
 
@@ -356,7 +385,7 @@ export default function App() {
                 size="sm"
                 variant="ghost"
                 aria-label="Toggle trending panel"
-                onClick={() => setTrendingOpen((v) => !v)}
+                onClick={toggleTrending}
                 css={{
                   color: "gray.500",
                   borderRadius: "lg",
@@ -390,7 +419,7 @@ export default function App() {
             }}
             variant="plain"
           >
-            <Tabs.List gap="2" overflowX="auto" maxW="100%" css={{ scrollbarWidth: "none" }}>
+            <Tabs.List gap="2" overflowX="auto" maxW="100%" px={{ base: "2", md: "0" }} css={{ scrollbarWidth: "none" }}>
               <Tabs.Trigger
                 value="nails_video"
                 css={{
@@ -411,7 +440,7 @@ export default function App() {
               >
                 <HStack gap="1.5">
                   <Icon fontSize="sm"><LuWandSparkles /></Icon>
-                  <Text>Nails Style Video / නිය වීඩියෝ</Text>
+                  <Text whiteSpace="nowrap">Nails Style Video</Text>
                 </HStack>
               </Tabs.Trigger>
               <Tabs.Trigger
@@ -434,7 +463,7 @@ export default function App() {
               >
                 <HStack gap="1.5">
                   <Icon fontSize="sm"><LuPenTool /></Icon>
-                  <Text>Tattoo Video Generator / ටැටූ වීඩියෝ</Text>
+                  <Text whiteSpace="nowrap">Tattoo Style Video</Text>
                 </HStack>
               </Tabs.Trigger>
             </Tabs.List>
@@ -442,21 +471,26 @@ export default function App() {
         </Box>
 
         {/* ===== MAIN CONTENT ===== */}
-        <Flex flex="1" overflow="hidden" minW="0">
+        <Flex flex="1" overflow="hidden" minW="0" minH="0" position="relative">
           {/* Left Sidebar */}
           <AnimatePresence initial={false}>
             {sidebarOpen && (
               <MotionBox
                 key="sidebar"
                 initial={{ width: 0, opacity: 0 }}
-                animate={{ width: 260, opacity: 1 }}
+                animate={{ width: isCompactLayout ? Math.min(300, window.innerWidth * 0.86) : 260, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
                 // @ts-expect-error framer-motion types
                 transition={{ duration: 0.3, ease: "easeInOut" }}
                 flexShrink={0}
                 overflow="hidden"
+                position={isCompactLayout ? "fixed" : "relative"}
+                left={isCompactLayout ? "0" : undefined}
+                top={isCompactLayout ? "0" : undefined}
+                bottom={isCompactLayout ? "0" : undefined}
+                zIndex={isCompactLayout ? 50 : undefined}
               >
-                <Box w="260px" h="100%">
+                <Box w={{ base: "min(86vw, 300px)", lg: "260px" }} h="100%">
                   <Sidebar
                     history={history}
                     onSelectHistory={handleSelectHistory}
@@ -473,11 +507,12 @@ export default function App() {
             minW="0"
             overflow="auto"
             p={{ base: "3", md: "5" }}
+            maxW="100%"
             css={{
-              borderLeft: sidebarOpen
+              borderLeft: sidebarOpen && !isCompactLayout
                 ? "1px solid rgba(255,255,255,0.05)"
                 : "none",
-              borderRight: trendingOpen
+              borderRight: trendingOpen && !isCompactLayout
                 ? "1px solid rgba(255,255,255,0.05)"
                 : "none",
             }}
@@ -509,15 +544,20 @@ export default function App() {
               <MotionBox
                 key="trending"
                 initial={{ width: 0, opacity: 0 }}
-                animate={{ width: 280, opacity: 1 }}
+                animate={{ width: isCompactLayout ? Math.min(320, window.innerWidth * 0.9) : 280, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
                 // @ts-expect-error framer-motion types
                 transition={{ duration: 0.3, ease: "easeInOut" }}
                 flexShrink={0}
                 overflow="hidden"
+                position={isCompactLayout ? "fixed" : "relative"}
+                right={isCompactLayout ? "0" : undefined}
+                top={isCompactLayout ? "0" : undefined}
+                bottom={isCompactLayout ? "0" : undefined}
+                zIndex={isCompactLayout ? 50 : undefined}
               >
                 <Box
-                  w="280px"
+                  w={{ base: "min(90vw, 320px)", lg: "280px" }}
                   h="100%"
                   overflow="auto"
                   css={{

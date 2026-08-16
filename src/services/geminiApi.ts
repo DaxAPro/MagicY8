@@ -116,12 +116,9 @@ export async function generatePrompt(
   apiKey: string,
   previousPrompt?: string,
 ): Promise<GenerateResult> {
+  void apiKey;
   if (!hasSupabaseSetup()) {
-    throw new GeminiError(
-      "Server connector is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local, then restart the app.",
-      0,
-      "configuration",
-    );
+    return generateLocalPrompt(toolType, formData, previousPrompt);
   }
   const result = await postJson<GenerateResult>({
     action: "generate_prompt",
@@ -202,12 +199,9 @@ export async function getTrends(toolType: ToolType, apiKey?: string): Promise<Tr
 }
 
 export async function testGeminiConnection(apiKey: string): Promise<HealthCheckResult> {
+  void apiKey;
   if (!hasSupabaseSetup()) {
-    throw new GeminiError(
-      "Server connector is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local, then restart the app.",
-      0,
-      "configuration",
-    );
+    return { ok: true, model: "Browser free prompt engine + Firebase save" };
   }
   return postJson<HealthCheckResult>({ action: "health_check" }, apiKey);
 }

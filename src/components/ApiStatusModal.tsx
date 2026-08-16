@@ -133,7 +133,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
   const handleTest = async () => {
     const keyToTest = savedKey ?? keyInput.trim()
     if (!keyToTest) {
-      setValidationError("Add your Groq API key to generate prompts.")
+      setValidationError("Groq API key is optional. Without it, MagicY8 uses the browser prompt engine and saves to Firebase.")
       return
     }
     const fmtErr = validateKeyFormat(keyToTest)
@@ -155,7 +155,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
       const result = await testGeminiConnection(keyToTest)
       if (result.ok) {
         setConnState("connected")
-        setTestMessage("Connection successful! Groq is ready.")
+        setTestMessage(result.model?.includes("Browser") ? "Firebase mode is ready. Prompts use the browser engine and save to Firebase." : "Connection successful! Groq is ready.")
       } else {
         setConnState("connection_failed")
         setTestMessage("Connection failed. Check your API key.")
@@ -224,7 +224,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
                 API Settings
               </DialogTitle>
               <Text textStyle="xs" color="gray.600" mt="0.5">
-                Provider: Groq — Bring Your Own API Key
+                Firebase prompt database + optional Groq key
               </Text>
             </Box>
           </HStack>
@@ -302,7 +302,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
             ) : (
               <VStack gap="2" align="stretch">
                 <Text textStyle="xs" color="gray.500" fontWeight="medium">
-                  Groq API Key
+                  Optional Groq API Key
                 </Text>
                 <HStack gap="2">
                   <Input
@@ -348,7 +348,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
                 )}
                 {!validationError && (
                   <Text textStyle="xs" color="gray.600">
-                    Add your Groq API key to generate prompts.
+                    Without a server connector, MagicY8 uses the browser prompt engine and saves prompts to Firebase.
                   </Text>
                 )}
               </VStack>
@@ -395,7 +395,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
                 </Box>
               </HStack>
               <Text textStyle="xs" color="gray.600" mt="2">
-                Google Sheet fallback stays hidden on the secure server.
+                Prompts are saved to Firebase Firestore when Firebase is configured.
               </Text>
             </Box>
 

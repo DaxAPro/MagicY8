@@ -241,18 +241,6 @@ export function NailsVideoGenerator({
       </MotionBox>
 
       <MotionBox initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} p="4" borderRadius="2xl" css={{ background: "rgba(255,255,255,0.03)", borderWidth: "1px", borderColor: "rgba(236,72,153,0.15)" }}>
-        <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap="3">
-          <SelectField label="Nail Style / නිය style" collection={nailStyles} value={[form.nailStyle]} onChange={([v]) => setField("nailStyle", v ?? "Glossy chrome")} accentColor="pink" />
-          <SelectField label="Nail Shape / නිය හැඩය" collection={nailShapes} value={[form.nailShape]} onChange={([v]) => setField("nailShape", v ?? "Almond")} accentColor="pink" />
-          <SelectField label="Color Palette / පාට set එක" collection={nailColors} value={[form.nailColor]} onChange={([v]) => setField("nailColor", v ?? "Pearl pink")} accentColor="pink" />
-          <SelectField label="Camera / කැමරා ගමන" collection={cameraMovements} value={[form.cameraMovement]} onChange={([v]) => setField("cameraMovement", v ?? "Macro push-in")} accentColor="pink" />
-          <SelectField label="Lighting / ආලෝකය" collection={lightings} value={[form.lighting]} onChange={([v]) => setField("lighting", v ?? "Soft beauty lighting")} accentColor="pink" />
-          <SelectField label="Video Style / වීඩියෝ ක්‍රමය" collection={processStyles} value={[form.revealStyle]} onChange={([v]) => setField("revealStyle", v ?? "mystery_macro_build")} accentColor="pink" />
-          <SelectField label="Color Mode / පාට වර්ගය" collection={colorModes} value={[form.colorMode]} onChange={([v]) => setField("colorMode", v ?? "soft_pastel")} accentColor="pink" />
-        </Grid>
-      </MotionBox>
-
-      <MotionBox initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} p="4" borderRadius="2xl" css={{ background: "rgba(255,255,255,0.03)", borderWidth: "1px", borderColor: "rgba(236,72,153,0.15)" }}>
         <Text fontWeight="semibold" color="pink.300" mb="1.5" css={{ textTransform: "uppercase", fontSize: "0.63rem" }}>Nail Video Idea / නිය වීඩියෝ අදහස *</Text>
         <Textarea placeholder="e.g. pink chrome French tip nails, art builds fast step by step, final design only at the end" value={form.coreIdea} onChange={(e) => setField("coreIdea", e.target.value)} rows={3} resize="none" css={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(236,72,153,0.3)", color: "white", _focus: { borderColor: "#ec4899", boxShadow: glowPink } }} />
         <HStack justify="space-between" align="center" mt="2" gap="3" flexWrap="wrap">
@@ -268,6 +256,18 @@ export function NailsVideoGenerator({
             Improve idea suggestion
           </Button>
         )}
+      </MotionBox>
+
+      <MotionBox initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} p="4" borderRadius="2xl" css={{ background: "rgba(255,255,255,0.03)", borderWidth: "1px", borderColor: "rgba(236,72,153,0.15)" }}>
+        <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap="3">
+          <SelectField label="Nail Style / නිය style" collection={nailStyles} value={[form.nailStyle]} onChange={([v]) => setField("nailStyle", v ?? "Glossy chrome")} accentColor="pink" />
+          <SelectField label="Nail Shape / නිය හැඩය" collection={nailShapes} value={[form.nailShape]} onChange={([v]) => setField("nailShape", v ?? "Almond")} accentColor="pink" />
+          <SelectField label="Color Palette / පාට set එක" collection={nailColors} value={[form.nailColor]} onChange={([v]) => setField("nailColor", v ?? "Pearl pink")} accentColor="pink" />
+          <SelectField label="Camera / කැමරා ගමන" collection={cameraMovements} value={[form.cameraMovement]} onChange={([v]) => setField("cameraMovement", v ?? "Macro push-in")} accentColor="pink" />
+          <SelectField label="Lighting / ආලෝකය" collection={lightings} value={[form.lighting]} onChange={([v]) => setField("lighting", v ?? "Soft beauty lighting")} accentColor="pink" />
+          <SelectField label="Video Style / වීඩියෝ ක්‍රමය" collection={processStyles} value={[form.revealStyle]} onChange={([v]) => setField("revealStyle", v ?? "mystery_macro_build")} accentColor="pink" />
+          <SelectField label="Color Mode / පාට වර්ගය" collection={colorModes} value={[form.colorMode]} onChange={([v]) => setField("colorMode", v ?? "soft_pastel")} accentColor="pink" />
+        </Grid>
       </MotionBox>
 
       <Button type="button" w="full" size={{ base: "lg", md: "xl" }} loading={loading} loadingText="Creating your nails video prompt..." onClick={handleGenerate} disabled={!form.coreIdea.trim() || loading} css={{ background: "linear-gradient(135deg, #db2777 0%, #7c3aed 55%, #0891b2 100%)", color: "white", fontWeight: "bold", minH: "56px", height: "auto", py: "3", boxShadow: !loading ? glowPink : "none" }}>
