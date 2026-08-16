@@ -472,6 +472,28 @@ export default function App() {
 
         {/* ===== MAIN CONTENT ===== */}
         <Flex flex="1" overflow="hidden" minW="0" minH="0" position="relative">
+          {/* Mobile panel backdrop */}
+          <AnimatePresence initial={false}>
+            {isCompactLayout && (sidebarOpen || trendingOpen) && (
+              <MotionBox
+                key="mobile-panel-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                // @ts-expect-error framer-motion types
+                transition={{ duration: 0.2 }}
+                position="fixed"
+                inset="0"
+                zIndex={40}
+                onClick={() => {
+                  setSidebarOpen(false)
+                  setTrendingOpen(false)
+                }}
+                css={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+              />
+            )}
+          </AnimatePresence>
+
           {/* Left Sidebar */}
           <AnimatePresence initial={false}>
             {sidebarOpen && (
@@ -495,6 +517,7 @@ export default function App() {
                     history={history}
                     onSelectHistory={handleSelectHistory}
                     onClearHistory={handleClearHistory}
+                    onClose={isCompactLayout ? () => setSidebarOpen(false) : undefined}
                   />
                 </Box>
               </MotionBox>

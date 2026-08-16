@@ -5,11 +5,12 @@ import {
   Button,
   HStack,
   Icon,
+  IconButton,
   Text,
   VStack,
 } from "@chakra-ui/react"
 import { AnimatePresence, motion } from "framer-motion"
-import { LuClock, LuTrash2 } from "react-icons/lu"
+import { LuClock, LuTrash2, LuX } from "react-icons/lu"
 import type { HistoryEntry, ToolType } from "../types"
 
 const MotionBox = motion.create(Box)
@@ -20,6 +21,7 @@ interface SidebarProps {
   history: HistoryEntry[]
   onSelectHistory: (entry: HistoryEntry) => void
   onClearHistory: () => void
+  onClose?: () => void
 }
 
 function toolBadgeColor(toolType: ToolType): string {
@@ -57,7 +59,7 @@ function HistoryTab({
           letterSpacing="widest"
           css={{ textTransform: "uppercase" }}
         >
-          {history.length} saved
+          {history.length} local
         </Text>
         <Button
           size="xs"
@@ -72,7 +74,7 @@ function HistoryTab({
           }}
         >
           <Icon fontSize="xs"><LuTrash2 /></Icon>
-          Clear all
+          Clear local
         </Button>
       </HStack>
       <AnimatePresence>
@@ -165,6 +167,7 @@ export function Sidebar({
   history,
   onSelectHistory,
   onClearHistory,
+  onClose,
 }: SidebarProps) {
   return (
     <Box
@@ -185,27 +188,47 @@ export function Sidebar({
             "linear-gradient(180deg, rgba(168,85,247,0.08) 0%, transparent 100%)",
         }}
       >
-        <Text
-          fontWeight="black"
-          letterSpacing="widest"
-          css={{
-            fontSize: "0.65rem",
-            textTransform: "uppercase",
-            background: "linear-gradient(90deg, #c084fc, #818cf8)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
-        >
-          MagicY8 Studio
-        </Text>
+                <HStack justify="space-between" gap="3">
+          <Text
+            fontWeight="black"
+            letterSpacing="widest"
+            css={{
+              fontSize: "0.65rem",
+              textTransform: "uppercase",
+              background: "linear-gradient(90deg, #c084fc, #818cf8)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}
+          >
+            MagicY8 Studio
+          </Text>
+          {onClose && (
+            <IconButton
+              size="xs"
+              variant="ghost"
+              aria-label="Close history"
+              onClick={onClose}
+              css={{
+                color: "gray.400",
+                borderRadius: "lg",
+                _hover: { background: "rgba(168,85,247,0.12)", color: "purple.200" },
+              }}
+            >
+              <LuX />
+            </IconButton>
+          )}
+        </HStack>
       </Box>
 
       {/* History */}
       <Box flex="1" overflow="auto" p="3" h="calc(100% - 80px)">
         <HistoryTab
           history={history}
-          onSelectHistory={onSelectHistory}
+          onSelectHistory={(entry) => {
+            onSelectHistory(entry)
+            onClose?.()
+          }}
           onClearHistory={onClearHistory}
         />
       </Box>
