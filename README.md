@@ -1,80 +1,85 @@
 # MagicY8 AI Video Prompt Generator
 
-MagicY8 converts a rough idea into a timed, production-ready AI video prompt. It keeps the existing general cinematic-video and tattoo-video tools, but no longer generates still-image prompts.
+MagicY8 is a mobile-friendly AI video prompt studio for **Nails Style Video** and **Tattoo Style Video** prompts. It is designed to run for a long time on GitHub Pages with Firebase Firestore used for prompt saving.
 
-## How it works
+## How It Works
 
-1. The React app collects the video idea and cinematic settings.
-2. A Supabase Edge Function validates the request and sends it to Groq.
-3. The result is checked for detail, timing, continuity, and originality. One corrective rewrite is attempted when quality checks fail.
-4. The completed prompt and its settings are sent to a protected Google Apps Script endpoint and appended to Google Sheets.
-5. If Sheet saving fails, the browser queues a server-signed retry. Duplicate generation IDs are ignored by Apps Script.
+1. The React app collects the idea and video settings.
+2. MagicY8 builds a premium 9:16, 10-second prompt with the browser prompt engine.
+3. Weak ideas are auto-improved before prompt generation.
+4. Successful prompts are saved to Firebase Firestore when Firebase config is available.
+5. Local history is used for learning better prompt patterns over time.
+6. If a Supabase connector is ever added again, the same UI can use it, but Supabase is not required for the current GitHub Pages setup.
 
-Each person supplies their own Groq API key in the app. The key stays only in that browser tab's session storage, is cleared when the tab is closed, is forwarded over HTTPS for the current request, and is redacted from server logs. Never place a Groq key in `VITE_*` variables or commit it to this folder.
+## Current Production Mode
 
-## 1. Install and run on this PC
+The live GitHub Pages site is Firebase-first:
 
-Requirements: Node.js 20 or newer, a Supabase project, and a Groq API key.
+- Supabase is not required.
+- Google Sheets is not required.
+- Groq API key is optional.
+- Prompt generation still works without an API key using the browser prompt engine.
+- Firebase Firestore saves generated prompts when Firebase config and Firestore rules are correct.
+
+## Install And Run Locally
+
+Requirements: Node.js 20 or newer.
 
 ```powershell
 npm install
 Copy-Item .env.example .env.local
+npm run dev
 ```
 
-Edit `.env.local` and set:
+Open `http://localhost:5173`.
+
+## Firebase Setup
+
+Add these values to `.env.local` for local use, and to the GitHub Pages workflow for production builds:
 
 ```text
-VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+VITE_FIREBASE_API_KEY=YOUR_FIREBASE_API_KEY
+VITE_FIREBASE_AUTH_DOMAIN=YOUR_FIREBASE_PROJECT.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=YOUR_FIREBASE_PROJECT_ID
+VITE_FIREBASE_STORAGE_BUCKET=YOUR_FIREBASE_PROJECT.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=YOUR_FIREBASE_MESSAGING_SENDER_ID
+VITE_FIREBASE_APP_ID=YOUR_FIREBASE_APP_ID
 ```
 
-Then run:
+Firebase config values are public browser config. Security must be enforced by Firestore Security Rules.
+
+## GitHub Pages Deployment
+
+This repo deploys from `.github/workflows/deploy-pages.yml` on every push to `main`.
 
 ```powershell
-npm run dev
+npm run lint
+npm run build
+git push origin main
 ```
 
-Open `http://localhost:5173`, select API Settings, add a Groq key, test the connection, and generate a video prompt.
+After pushing, GitHub Actions builds `dist` and publishes it to GitHub Pages. The live site can take a few minutes to show the new version. If a phone still shows the old UI, refresh the page or clear browser cache.
 
-## 2. Connect Google Sheets securely
+## Firestore Security
 
-1. Create a new Google Sheet.
-2. Open Extensions → Apps Script.
-3. Replace the editor contents with `google-apps-script/Code.gs` from this project.
-4. In Apps Script, open Project Settings → Script properties.
-5. Add `MAGICY8_WEBHOOK_SECRET` with a long random value (at least 32 random characters).
-6. Deploy → New deployment → Web app. Execute as yourself; allow access to anyone. Copy the `/exec` URL.
-7. Store the same URL and secret only in Supabase Edge Function secrets:
+Use Firestore rules from `FIREBASE_SETUP.md`. The recommended setup allows public prompt creation with strict field validation and blocks browser reads, updates, and deletes.
 
-```powershell
-supabase secrets set GOOGLE_SHEETS_WEBHOOK_URL="YOUR_APPS_SCRIPT_EXEC_URL"
-supabase secrets set GOOGLE_SHEETS_WEBHOOK_SECRET="YOUR_LONG_RANDOM_SECRET"
-supabase secrets set SHEET_SIGNING_SECRET="A_DIFFERENT_LONG_RANDOM_SECRET"
-supabase secrets set ALLOWED_ORIGINS="http://localhost:5173,http://127.0.0.1:5173"
-supabase functions deploy gemini
-```
+That means:
 
-Do not put any of these three secrets in `.env.local`. Only the Supabase URL and anon key belong there.
+- Prompt saving works from the website.
+- Existing Firebase prompts are not readable by random visitors.
+- Auto-learning uses local browser history by default.
+- Global Firebase-based learning needs a future protected Cloud Function or carefully limited read endpoint.
 
-The first accepted record creates a `MagicY8_Data` tab and its headers automatically. Confirm that the app shows “Saved to Google Sheets” and that one new row appears.
+## Optional Legacy Integrations
 
-## 3. Personal local use
+Some legacy files remain for optional future integrations:
 
-Double-click `MagicY8 START LOCAL.bat` to run it on this PC, or run:
+- `supabase/` contains an old Edge Function path.
+- `google-apps-script/` contains an old Google Sheets path.
+- `src/services/directGoogleSheets.ts` is optional and not part of the Firebase-first production flow.
 
-```powershell
-npm run dev
-```
-
-## Security notes
-
-- Google Sheets and retry calls are authenticated with server-only secrets/signatures.
-- Allowed browser origins are restricted by the Edge Function.
-- Request sizes, video-only fields, durations, ratios, targets, and retry IDs are validated server-side.
-- Sheet cells that could be interpreted as formulas are escaped.
-- The Google webhook URL and secrets are no longer hard-coded in source.
-- The Supabase anon key is public by design; never use a service-role key in the frontend.
-- No website can be guaranteed “unhackable.” Keep Supabase, Groq, dependencies, and Apps Script permissions updated, and set conservative Groq project rate/spend limits.
+Do not add private API keys or service-role secrets to frontend `VITE_*` variables.
 
 ## Verification
 
@@ -83,4 +88,4 @@ npm run lint
 npm run build
 ```
 
-If the app says setup is incomplete, check `.env.local`. If Groq fails, test the key in API Settings. If Sheet sync fails, check all three Supabase secrets, the Apps Script script property, and that the latest Apps Script deployment is active.
+Both commands should pass before pushing changes to GitHub.

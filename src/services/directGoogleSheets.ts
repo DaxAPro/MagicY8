@@ -39,7 +39,7 @@ export async function savePromptDirectToGoogleSheets(
     originalCoreIdea: payload.coreIdea,
     finalPrompt: payload.finalPrompt,
     negativePrompt: "",
-    targetGenerator: "Groq direct",
+    targetGenerator: "Browser prompt engine",
     aspectRatio: "9:16",
     duration: payload.duration ?? "10s",
     cameraMovement: "",
@@ -54,7 +54,7 @@ export async function savePromptDirectToGoogleSheets(
     nailStyle: payload.nailStyle ?? "",
     nailShape: payload.nailShape ?? "",
     nailColor: payload.nailColor ?? "",
-    modelUsed: payload.model ?? "Groq direct",
+    modelUsed: payload.model ?? "Browser prompt engine",
     fallbackUsed: false,
     applicationName: "MagicY8",
   };
@@ -68,9 +68,9 @@ export async function savePromptDirectToGoogleSheets(
     });
     return {
       saved: false,
-      error: "Google Sheet request was sent, but browser-only sync cannot confirm the save. Use the Supabase connector for verified Sheet status.",
+      error: "Google Sheet request was sent, but browser-only sync cannot confirm the save. Firebase Firestore is the primary verified prompt database for MagicY8.",
     };
   } catch {
-    return { saved: false, error: "Could not send prompt to Google Sheet." };
+    return { saved: false, error: "Could not send prompt to Google Sheet. Firebase Firestore remains the primary prompt database." };
   }
 }
