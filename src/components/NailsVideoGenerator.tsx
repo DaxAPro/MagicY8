@@ -18,7 +18,6 @@ import { generateLocalPrompt, generatePrompt, GeminiError } from "../services/ge
 import { getApiKey } from "../services/apiKeyStorage"
 import { savePromptToFirebase } from "../services/firebasePromptStore"
 import {
-  getPromptIdeaFeedback,
   normalizeGeneratedPrompt,
   normalizeFormDataForSave,
   preparePromptIdeaForGeneration,
@@ -229,9 +228,6 @@ export function NailsVideoGenerator({
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const ideaFeedback = form.coreIdea.trim()
-    ? getPromptIdeaFeedback(form.coreIdea, "nails_video")
-    : undefined
 
   return (
     <VStack gap="4" align="stretch">
@@ -245,17 +241,7 @@ export function NailsVideoGenerator({
         <Textarea placeholder="e.g. pink chrome French tip nails, art builds fast step by step, final design only at the end" value={form.coreIdea} onChange={(e) => setField("coreIdea", e.target.value)} rows={3} resize="none" css={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(236,72,153,0.3)", color: "white", _focus: { borderColor: "#ec4899", boxShadow: glowPink } }} />
         <HStack justify="space-between" align="center" mt="2" gap="3" flexWrap="wrap">
           <Text textStyle="xs" color="gray.500">Duration fixed: 10 seconds / කාලය තත්පර 10යි</Text>
-          {ideaFeedback && (
-            <Text textStyle="xs" color={ideaFeedback.label === "Weak" ? "red.300" : ideaFeedback.label === "Good" ? "yellow.300" : "green.300"}>
-              Idea quality: {ideaFeedback.label} ({ideaFeedback.score}%)
-            </Text>
-          )}
         </HStack>
-        {ideaFeedback?.label === "Weak" && (
-          <Button type="button" size="xs" mt="2" variant="ghost" onClick={() => setField("coreIdea", ideaFeedback.suggestion)} css={{ color: "pink.300", _hover: { background: "rgba(236,72,153,0.12)" } }}>
-            Improve idea suggestion
-          </Button>
-        )}
       </MotionBox>
 
       <MotionBox initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} p="4" borderRadius="2xl" css={{ background: "rgba(255,255,255,0.03)", borderWidth: "1px", borderColor: "rgba(236,72,153,0.15)" }}>
