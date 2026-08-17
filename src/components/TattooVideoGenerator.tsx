@@ -131,15 +131,6 @@ const processStyles = createListCollection({
   ],
 })
 
-const colorModes = createListCollection({
-  items: [
-    { label: "Black & White / කළු සුදු", value: "black_white" },
-    { label: "Black & Grey / කළු අළු", value: "black_grey" },
-    { label: "Single Accent / එක highlight පාටක්", value: "single_accent" },
-    { label: "Full Color / full පාට", value: "full_color" },
-    { label: "Artist Choice / AI හොඳම පාට", value: "artist_choice" },
-  ],
-})
 
 interface TattooVideoGeneratorProps {
   onPromptGenerated: (entry: HistoryEntry) => void
@@ -165,7 +156,7 @@ export function TattooVideoGenerator({
     aspectRatio: fixedVerticalAspectRatio,
     subjectGender: initialForm?.subjectGender ?? "woman",
     revealStyle: initialForm?.revealStyle ?? "mystery_macro_build",
-    colorMode: initialForm?.colorMode ?? "black_grey",
+    colorMode: initialForm?.colorMode ?? "artist_choice",
   })
   const [output, setOutput] = useState("")
   const [loading, setLoading] = useState(false)
@@ -289,7 +280,7 @@ export function TattooVideoGenerator({
       <MotionBox initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} p="4" borderRadius="2xl" css={{ background: "rgba(255,255,255,0.03)", borderWidth: "1px", borderColor: "rgba(249,115,22,0.15)" }}>
         <Text fontWeight="semibold" color="orange.300" mb="1.5" css={{ textTransform: "uppercase", fontSize: "0.63rem" }}>Tattoo Video Idea / ටැටූ වීඩියෝ අදහස *</Text>
         <Textarea
-          placeholder="e.g. fine-line rose tattoo, black grey shading, final design only at the end"
+          placeholder="e.g. sexy adult woman with dragon tattoo on outer forearm, real needle tattoo process"
           value={form.coreIdea}
           onChange={(e) => setField("coreIdea", e.target.value)}
           rows={3}
@@ -317,7 +308,6 @@ export function TattooVideoGenerator({
           <SelectField label="Ink Style / ink පාට" collection={inkStyles} value={[form.inkStyle]} onChange={([v]) => setField("inkStyle", v ?? "Black ink")} accentColor="orange" />
           <SelectField label="Subject / කෙනා" collection={subjectGenders} value={[form.subjectGender]} onChange={([v]) => setField("subjectGender", v ?? "woman")} accentColor="orange" />
           <SelectField label="Video Style / වීඩියෝ ක්‍රමය" collection={processStyles} value={[form.revealStyle]} onChange={([v]) => setField("revealStyle", v ?? "mystery_macro_build")} accentColor="orange" />
-          <SelectField label="Color Mode / පාට වර්ගය" collection={colorModes} value={[form.colorMode]} onChange={([v]) => setField("colorMode", v ?? "black_grey")} accentColor="orange" />
         </Grid>
       </MotionBox>
 

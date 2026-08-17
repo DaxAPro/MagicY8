@@ -49,12 +49,17 @@ const VISUAL_TERMS = new Set([
   "black",
   "blue",
   "butterfly",
+  "cat",
   "clean",
   "color",
   "flower",
   "gold",
   "green",
   "heart",
+  "ocean",
+  "panda",
+  "sea",
+  "wave",
   "pink",
   "red",
   "rose",
@@ -79,14 +84,19 @@ const MEANINGFUL_TERMS = new Set([...NAIL_TERMS, ...TATTOO_TERMS, ...VISUAL_TERM
 
 const IDEA_EXPANSIONS: Record<ToolType, Record<string, string>> = {
   nails_video: {
-    aura: "soft pink aura nails with glossy airbrushed glow and pearl highlights",
-    butterfly: "soft pastel butterfly nail art with chrome accents and glossy macro reveal",
-    chrome: "pink chrome French tip nails with mirror shine and pearl highlights",
-    dragon: "tiny chrome dragon accent nail art with black gel linework and glossy final reveal",
-    flower: "delicate rose flower nail art with pearl pink gel polish and clean glossy finish",
-    heart: "pink heart accent nails with chrome outline and soft beauty lighting",
-    rose: "rose flower nail art with pearl pink chrome details and glossy salon finish",
-    star: "silver star accent nails with soft pastel polish and glossy macro reveal",
+    aura: "aura nails with glossy airbrushed glow and pearl highlights in colors from the user idea",
+    butterfly: "butterfly nail art with clear wing motifs, colors chosen from the user idea, and glossy macro reveal",
+    chrome: "chrome French tip nails with mirror shine and colors chosen from the user idea",
+    dragon: "tiny dragon accent nail art with clean linework and glossy final reveal",
+    flower: "delicate flower nail art with colors from the requested flower and clean glossy finish",
+    heart: "heart accent nails with colors chosen from the user idea and soft beauty lighting",
+    rose: "rose flower nail art with rose-inspired colors and glossy salon finish",
+    cat: "cat themed nail art with tiny cat face, ears, whiskers, paw-print details, and glossy macro reveal",
+    ocean: "ocean and sea themed nail art with blue waves, foam, shell accents, and glossy water reflections",
+    panda: "panda themed nail art with clear black-white panda face, ears, paw details, and glossy final reveal",
+    sea: "sea themed nail art with blue ocean waves, foam, shell accents, and glossy water reflections",
+    wave: "ocean wave nail art with blue water movement, foam edges, and glossy macro reveal",
+    star: "star accent nails with colors chosen from the user idea and glossy macro reveal",
   },
   tattoo_video: {
     aura: "minimal aura-inspired ornamental tattoo with soft black and grey shading on the outer forearm",
@@ -167,8 +177,8 @@ export function improvePromptIdea(input: string, toolType: ToolType): string {
   const trimmed = input.trim();
   const fallback =
     toolType === "nails_video"
-      ? "pink chrome French tip nails with glossy pearl highlights"
-      : "minimal blackwork dragon tattoo around the outer forearm";
+      ? "custom nail art based exactly on the user idea with clear readable motifs and glossy final reveal"
+      : "custom tattoo design based exactly on the user idea, inked on the selected body part with cinematic macro reveal";
   if (!trimmed || normalizedWords(trimmed).some(looksLikeRandomToken)) return fallback;
 
   const words = normalizedWords(trimmed);
@@ -180,8 +190,8 @@ export function improvePromptIdea(input: string, toolType: ToolType): string {
 
   const suffix =
     toolType === "nails_video"
-      ? "with glossy macro reveal and clean final hero shot"
-      : "with cinematic macro reveal and clean final hero shot";
+      ? "as clear nail-art motifs with glossy macro reveal and clean final hero shot"
+      : "as an actual inked tattoo on skin with cinematic macro reveal and clean final hero shot";
   return `${trimmed} ${suffix}`.replace(/\s+/g, " ").trim();
 }
 
@@ -218,12 +228,12 @@ export function validatePromptIdea(input: string, toolType: ToolType): string | 
 
   const words = normalizedWords(trimmed);
   if (words.some(looksLikeRandomToken)) {
-    return "මේක random text වගේ. Real design idea එකක් type කරන්න, e.g. pink chrome French tips.";
+    return "මේක random text වගේ. Real design idea එකක් type කරන්න, e.g. cat sea panda nail art.";
   }
 
   const hasMeaningfulTerm = words.some((word) => MEANINGFUL_TERMS.has(word));
   if (words.length === 1 && !hasMeaningfulTerm) {
-    return "මේක random text වගේ. Real design idea එකක් type කරන්න, e.g. pink chrome French tips.";
+    return "මේක random text වගේ. Real design idea එකක් type කරන්න, e.g. cat sea panda nail art.";
   }
 
   const usefulWords = words.filter((word) => MEANINGFUL_TERMS.has(word));

@@ -99,16 +99,16 @@ export function buildBrowserLocalPrompt(
 }
 
 function buildNailsPrompt(data: Record<string, unknown>, previousPrompt?: string): string {
-  const coreIdea = cleanIdea(data.coreIdea, "pink chrome French tip nails with glossy pearl highlights");
+  const coreIdea = cleanIdea(data.coreIdea, "custom subject nail art with clear readable motifs and glossy final reveal");
   const duration = "10s";
   const nailStyle = String(data.nailStyle ?? "Glossy chrome");
   const nailShape = String(data.nailShape ?? "Almond");
-  const nailColor = String(data.nailColor ?? "Pearl pink");
+  const nailColor = String(data.nailColor ?? "artist choice from the exact user idea");
   const camera = String(data.cameraMovement ?? "Macro push-in");
   const lighting = String(data.lighting ?? "Soft beauty lighting");
   const processStyle = String(data.revealStyle ?? "mystery_macro_build");
-  const colorMode = String(data.colorMode ?? "soft_pastel");
-  const variant = chooseVariant(coreIdea + nailStyle + nailColor, previousPrompt);
+  const colorMode = String(data.colorMode ?? "artist_choice");
+  const variant = chooseVariant(coreIdea + nailStyle + nailShape, previousPrompt);
   const trends = getLocalTrends("nails_video");
   const trend = trends[variant % trends.length] ?? LOCAL_NAIL_TRENDS[0];
   const learnedSnippet = getLearnedPromptMemory().nails_video.promptSnippets[variant];
@@ -132,16 +132,16 @@ function buildNailsPrompt(data: Record<string, unknown>, previousPrompt?: string
   return [
     `A premium 9:16 vertical ${duration} AI video prompt for Google Flow, Veo, Sora, Runway, or Kling.`,
     `Main concept: ${coreIdea}.`,
-    `Creative direction: make a luxury salon macro reveal of ${nailStyle} on a ${nailShape} nail using ${nailColor}; use ${trend.title} only as a refined trend influence, not as a copied template.`,
+    `Creative direction: make a luxury salon macro reveal of ${nailStyle} on a ${nailShape} nail. Exact user concept is mandatory: every named subject, object, animal, place, or theme in "${coreIdea}" must appear clearly as nail-art motifs on the nail, not be replaced by a fixed color, preset style, or a generic manicure. Use ${nailColor} only if it supports the concept; use ${trend.title} only as a subtle quality influence, never as the main idea.`,
     learnedSnippet ? `Learned quality pattern: borrow pacing, clarity, and final-frame discipline from this saved style: ${learnedSnippet}` : "",
     `Opening hook: ${hooks[variant]}` ,
     `Process rule: ${processStyleInstruction("nails_video", processStyle)}. Show real nail-tool cause and effect: brush contact, gel thickness, chrome reflection, glitter placement, top-coat shine, and clean curing-like finish.`,
-    `Color direction: ${colorModeInstruction("nails_video", colorMode)} Keep the palette intentional, premium, and consistent across every frame.`,
+    `Color direction: ${colorModeInstruction("nails_video", colorMode)} Infer colors from the exact idea first; do not force pink, pastel, chrome, or pearl unless the user asked for them. Keep the palette intentional, premium, and consistent across every frame.`,
     `Camera and light: ${camera}; ${lighting}; shallow depth of field, stable hand framing, glossy beauty-commercial texture, crisp highlights, no shaky drift.`,
     `Timeline: ${buildBeats[variant]} Use a curiosity hook in the first second, satisfying progress in the middle, and one clean reveal at the end.`,
     `Final frame: the last 1.5-2 seconds must be the first clean full finished nail-art hero view, sharp, glossy, centered, fully inside the frame, thumbnail-ready, no text overlay.`,
-    "Quality guardrails: preserve the same nail shape, same finger count, same color palette, and same design geometry from start to finish.",
-    "Avoid: full hands unless necessary, extra fingers, warped cuticles, changing nail length, melted polish, messy failure looks, random scribbles, early full reveal, captions, logos, watermarks, blur, flicker, and AI morphing.",
+    "Quality guardrails: preserve the same nail shape, one clear adult finger or one clean set of five fingers only when needed, natural cuticles, stable anatomy, same palette, and same design geometry from start to finish.",
+    "Avoid: fixed-color generic outputs, random unrelated motifs, full hands unless necessary, extra fingers, missing fingers, warped finger shapes, swollen cuticles, changing nail length, melted polish, messy failure looks, random scribbles, early full reveal, captions, logos, watermarks, blur, flicker, and AI morphing.",
   ].join(" ");
 }
 
@@ -154,7 +154,7 @@ function buildTattooPrompt(data: Record<string, unknown>, previousPrompt?: strin
   const camera = String(data.cameraMovement ?? "Macro close-up");
   const lighting = String(data.lighting ?? "Studio rim lighting");
   const processStyle = String(data.revealStyle ?? "mystery_macro_build");
-  const colorMode = String(data.colorMode ?? "black_grey");
+  const colorMode = String(data.colorMode ?? "artist_choice");
   const variant = chooseVariant(coreIdea + tattooStyle + bodyPart, previousPrompt);
   const trends = getLocalTrends("tattoo_video");
   const trend = trends[variant % trends.length] ?? LOCAL_TATTOO_TRENDS[0];
@@ -178,17 +178,17 @@ function buildTattooPrompt(data: Record<string, unknown>, previousPrompt?: strin
 
   return [
     "A premium 9:16 vertical 10-second AI video prompt for Google Flow, Veo, Sora, Runway, or Kling.",
-    `Tattoo concept: ${coreIdea}.`,
-    `Subject and placement: ${subjectGender}, tasteful non-explicit styling, natural skin texture, stable anatomy; place the design only on ${bodyPart}.`,
+    `Tattoo concept: ${coreIdea}. The requested design is mandatory and must be the visible tattoo artwork, not a random symbol, sticker, body-paint effect, or unrelated image.`,
+    `Subject and placement: ${subjectGender}, glamorous tasteful non-explicit styling when requested, natural skin texture, stable anatomy; place the design only on ${bodyPart}.`,
     `Creative direction: ${tattooStyle} tattoo process with ${inkStyle}; use ${trend.title} only as a refined influence, not as a copied template.`,
     learnedSnippet ? `Learned quality pattern: borrow pacing, clarity, and final-frame discipline from this saved style: ${learnedSnippet}` : "",
     `Opening hook: ${hooks[variant]}` ,
-    `Process rule: ${processStyleInstruction("tattoo_video", processStyle)}. Show believable tattoo-tool cause and effect: stencil fragment, needle pass, clean linework, controlled shading, ink settling, and skin-safe professional wiping.`,
+    `Process rule: ${processStyleInstruction("tattoo_video", processStyle)}. Show believable real tattoo-tool cause and effect: stencil transfer, tattoo machine needle touching skin, ink entering the selected placement, clean linework, controlled shading, ink settling, and skin-safe professional wiping.`,
     `Color direction: ${colorModeInstruction("tattoo_video", colorMode)} Keep ink values consistent and premium across every frame.`,
     `Camera and light: ${camera}; ${lighting}; premium studio macro, realistic tool movement, consistent placement, shallow depth of field, no shaky drift.`,
     `Timeline: ${buildBeats[variant]} Use a curiosity hook in the first second, satisfying progress in the middle, and one clean reveal at the end.`,
     "Final frame: the final two seconds must be the first complete finished-art hero view, unobstructed, sharp, centered, fully inside the frame, thumbnail-ready, no text overlay.",
-    "Quality guardrails: preserve the same body part, same tattoo scale, same stencil geometry, same ink palette, and natural skin texture from start to finish.",
-    "Avoid: full body framing, extra fingers, duplicated hands, warped limbs, rubber skin, excessive blood, nudity, unsafe needle behavior, early full stencil reveal, captions, logos, watermarks, blur, flicker, and AI morphing.",
+    "Quality guardrails: preserve the same body part, same tattoo scale, same stencil geometry, same ink palette, natural skin texture, and realistic anatomy from start to finish.",
+    "Avoid: fake overlay tattoos, stickers, body paint, unrelated drawings, full body framing, extra fingers, duplicated hands, warped limbs, rubber skin, excessive blood, nudity, unsafe needle behavior, early full stencil reveal, captions, logos, watermarks, blur, flicker, and AI morphing.",
   ].join(" ");
 }
