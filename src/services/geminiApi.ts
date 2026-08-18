@@ -53,6 +53,11 @@ export class GeminiError extends Error {
   }
 }
 
+export function shouldUseLocalPromptFallback(err: unknown): boolean {
+  if (!(err instanceof GeminiError)) return true;
+  return ["configuration", "network", "timeout", "model_unavailable", "empty"].includes(err.code ?? "");
+}
+
 async function postJson<T>(body: unknown, apiKey?: string): Promise<T> {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL === "undefined") {
     throw new GeminiError(
@@ -116,7 +121,6 @@ export async function generatePrompt(
   apiKey: string,
   previousPrompt?: string,
 ): Promise<GenerateResult> {
-  void apiKey;
   if (!hasSupabaseSetup()) {
     return generateLocalPrompt(toolType, formData, previousPrompt);
   }
@@ -199,7 +203,6 @@ export async function getTrends(toolType: ToolType, apiKey?: string): Promise<Tr
 }
 
 export async function testGeminiConnection(apiKey: string): Promise<HealthCheckResult> {
-  void apiKey;
   if (!hasSupabaseSetup()) {
     return { ok: true, model: "Browser free prompt engine + Firebase save" };
   }

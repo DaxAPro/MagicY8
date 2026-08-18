@@ -17,9 +17,9 @@ import { useCallback, useRef, useState } from "react"
 import { LuPenTool, LuVideo } from "react-icons/lu"
 import { getApiKey } from "../services/apiKeyStorage"
 import { savePromptToFirebase } from "../services/firebasePromptStore"
-import { GeminiError, generateLocalPrompt, generatePrompt } from "../services/geminiApi"
+import { GeminiError, generateLocalPrompt, generatePrompt, shouldUseLocalPromptFallback } from "../services/geminiApi"
 import { safeRandomId } from "../services/id"
-import { preparePromptIdeaForGeneration } from "../services/promptValidation"
+import { normalizeGeneratedPrompt, preparePromptIdeaForGeneration } from "../services/promptValidation"
 import { addPendingRecord } from "../services/sheetRetryQueue"
 import type { HistoryEntry, SheetStatus, TattooVideoFormState } from "../types"
 import { PromptOutput } from "./PromptOutput"
@@ -195,12 +195,14 @@ export function TattooVideoGenerator({
       }
       const apiKey = getApiKey()
       const result = apiKey
-        ? await generatePrompt("tattoo_video", requestData, apiKey, lastPromptRef.current).catch(() =>
-          generateLocalPrompt("tattoo_video", requestData, lastPromptRef.current),
-        )
+        ? await generatePrompt("tattoo_video", requestData, apiKey, lastPromptRef.current).catch((err) => {
+          if (!shouldUseLocalPromptFallback(err)) throw err
+          return generateLocalPrompt("tattoo_video", requestData, lastPromptRef.current)
+        })
         : await generateLocalPrompt("tattoo_video", requestData, lastPromptRef.current)
 
-      const { prompt, model, fallbackUsed, generationId: genId, sheetSaved, sheetError: sheetErr, syncToken } = result
+      const { model, fallbackUsed, generationId: genId, sheetSaved, sheetError: sheetErr, syncToken } = result
+      const prompt = normalizeGeneratedPrompt(result.prompt, "tattoo_video")
       setOutput(prompt)
       onModelUsed?.(model)
       setGenerationId(genId)

@@ -14,7 +14,7 @@ import {
 import { motion } from "framer-motion"
 import { useCallback, useRef, useState } from "react"
 import { LuSparkles, LuWandSparkles } from "react-icons/lu"
-import { generateLocalPrompt, generatePrompt, GeminiError } from "../services/geminiApi"
+import { generateLocalPrompt, generatePrompt, GeminiError, shouldUseLocalPromptFallback } from "../services/geminiApi"
 import { getApiKey } from "../services/apiKeyStorage"
 import { savePromptToFirebase } from "../services/firebasePromptStore"
 import {
@@ -140,9 +140,10 @@ export function NailsVideoGenerator({
       )
       const apiKey = getApiKey()
       const result = apiKey
-        ? await generatePrompt("nails_video", requestData, apiKey, lastPromptRef.current).catch(() =>
-          generateLocalPrompt("nails_video", requestData, lastPromptRef.current),
-        )
+        ? await generatePrompt("nails_video", requestData, apiKey, lastPromptRef.current).catch((err) => {
+          if (!shouldUseLocalPromptFallback(err)) throw err
+          return generateLocalPrompt("nails_video", requestData, lastPromptRef.current)
+        })
         : await generateLocalPrompt("nails_video", requestData, lastPromptRef.current)
       const prompt = normalizeGeneratedPrompt(result.prompt, "nails_video")
       setOutput(prompt)

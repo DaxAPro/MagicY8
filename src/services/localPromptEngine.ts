@@ -98,6 +98,21 @@ export function buildBrowserLocalPrompt(
     : buildNailsPrompt(data, previousPrompt);
 }
 
+const NAIL_ANATOMY_RULE =
+  "Subject framing: show exactly one adult fingernail on one natural finger, cropped from fingertip to first knuckle only. Keep the palm, other fingers, whole hand, wrist, and duplicate nail beds out of frame.";
+
+const NAIL_NEGATIVE_ANATOMY =
+  "Avoid: full hands, five-finger hand poses, palms, wrists, extra fingers, missing fingers, fused fingers, six or seven fingers, duplicated nails, second hands, warped finger shapes, swollen cuticles, changing nail length, changing nail shape, melted polish, messy failure looks, random scribbles, early full reveal, captions, logos, watermarks, blur, flicker, and AI morphing.";
+
+const TATTOO_SUBJECT_RULE =
+  "Subject rule: clearly adult subject age 25+, polished glamorous fashion-editorial styling, confident elegant posture, realistic adult anatomy, tasteful wardrobe or draping only where needed for the selected tattoo area.";
+
+const TATTOO_PROCESS_RULE =
+  "Process rule: show a real professional tattoo machine needle contacting skin, stencil transfer or cropped outline, ink entering skin, controlled linework, shading or color pass, ink settling naturally, and a final skin-safe wipe.";
+
+const TATTOO_NEGATIVE_RULE =
+  "Avoid: fake tattoo stickers, body paint, makeup drawing, marker drawing, projected overlays, temporary transfers, random unrelated drawings, botched tattoos, schoolgirl styling, school uniforms, teenage or minor-looking subjects, nudity, gore, excessive blood, unsafe needle behavior, full tattoo visible at the start, captions, logos, watermarks, blur, flicker, and AI morphing.";
+
 function buildNailsPrompt(data: Record<string, unknown>, previousPrompt?: string): string {
   const coreIdea = cleanIdea(data.coreIdea, "custom subject nail art with clear readable motifs and glossy final reveal");
   const duration = "10s";
@@ -137,11 +152,12 @@ function buildNailsPrompt(data: Record<string, unknown>, previousPrompt?: string
     `Opening hook: ${hooks[variant]}` ,
     `Process rule: ${processStyleInstruction("nails_video", processStyle)}. Show real nail-tool cause and effect: brush contact, gel thickness, chrome reflection, glitter placement, top-coat shine, and clean curing-like finish.`,
     `Color direction: ${colorModeInstruction("nails_video", colorMode)} Infer colors from the exact idea first; do not force pink, pastel, chrome, or pearl unless the user asked for them. Keep the palette intentional, premium, and consistent across every frame.`,
-    `Camera and light: ${camera}; ${lighting}; shallow depth of field, stable hand framing, glossy beauty-commercial texture, crisp highlights, no shaky drift.`,
+    `Camera and light: ${camera}; ${lighting}; shallow depth of field, stable fingertip framing, glossy beauty-commercial texture, crisp highlights, no shaky drift.`,
     `Timeline: ${buildBeats[variant]} Use a curiosity hook in the first second, satisfying progress in the middle, and one clean reveal at the end.`,
     `Final frame: the last 1.5-2 seconds must be the first clean full finished nail-art hero view, sharp, glossy, centered, fully inside the frame, thumbnail-ready, no text overlay.`,
-    "Quality guardrails: preserve the same nail shape, one clear adult finger or one clean set of five fingers only when needed, natural cuticles, stable anatomy, same palette, and same design geometry from start to finish.",
-    "Avoid: fixed-color generic outputs, random unrelated motifs, full hands unless necessary, extra fingers, missing fingers, warped finger shapes, swollen cuticles, changing nail length, melted polish, messy failure looks, random scribbles, early full reveal, captions, logos, watermarks, blur, flicker, and AI morphing.",
+    `Quality guardrails: ${NAIL_ANATOMY_RULE} Preserve the same single nail shape, natural cuticles, stable anatomy, same palette, and same design geometry from start to finish.`,
+    "Beauty standard: make the result elegant, clean, glossy, and thumbnail-ready, with refined salon styling instead of a plain enlarged prompt.",
+    NAIL_NEGATIVE_ANATOMY,
   ].join(" ");
 }
 
@@ -150,7 +166,7 @@ function buildTattooPrompt(data: Record<string, unknown>, previousPrompt?: strin
   const tattooStyle = String(data.tattooStyle ?? "Realistic");
   const bodyPart = String(data.bodyPartDescription ?? data.bodyPartLabel ?? data.bodyPart ?? "the outer forearm");
   const inkStyle = String(data.inkStyle ?? "Black ink");
-  const subjectGender = String(data.subjectGender ?? "woman") === "man" ? "adult man age 21+" : "adult woman age 21+";
+  const subjectGender = String(data.subjectGender ?? "woman") === "man" ? "adult man age 25+" : "adult woman age 25+";
   const camera = String(data.cameraMovement ?? "Macro close-up");
   const lighting = String(data.lighting ?? "Studio rim lighting");
   const processStyle = String(data.revealStyle ?? "mystery_macro_build");
@@ -179,16 +195,16 @@ function buildTattooPrompt(data: Record<string, unknown>, previousPrompt?: strin
   return [
     "A premium 9:16 vertical 10-second AI video prompt for Google Flow, Veo, Sora, Runway, or Kling.",
     `Tattoo concept: ${coreIdea}. The requested design is mandatory and must be the visible tattoo artwork, not a random symbol, sticker, body-paint effect, or unrelated image.`,
-    `Subject and placement: ${subjectGender}, glamorous tasteful non-explicit styling when requested, natural skin texture, stable anatomy; place the design only on ${bodyPart}.`,
+    `Subject and placement: ${subjectGender}. ${TATTOO_SUBJECT_RULE} Place the design only on ${bodyPart}.`,
     `Creative direction: ${tattooStyle} tattoo process with ${inkStyle}; use ${trend.title} only as a refined influence, not as a copied template.`,
     learnedSnippet ? `Learned quality pattern: borrow pacing, clarity, and final-frame discipline from this saved style: ${learnedSnippet}` : "",
     `Opening hook: ${hooks[variant]}` ,
-    `Process rule: ${processStyleInstruction("tattoo_video", processStyle)}. Show believable real tattoo-tool cause and effect: stencil transfer, tattoo machine needle touching skin, ink entering the selected placement, clean linework, controlled shading, ink settling, and skin-safe professional wiping.`,
+    `Process direction: ${processStyleInstruction("tattoo_video", processStyle)}. ${TATTOO_PROCESS_RULE}`,
     `Color direction: ${colorModeInstruction("tattoo_video", colorMode)} Keep ink values consistent and premium across every frame.`,
     `Camera and light: ${camera}; ${lighting}; premium studio macro, realistic tool movement, consistent placement, shallow depth of field, no shaky drift.`,
     `Timeline: ${buildBeats[variant]} Use a curiosity hook in the first second, satisfying progress in the middle, and one clean reveal at the end.`,
     "Final frame: the final two seconds must be the first complete finished-art hero view, unobstructed, sharp, centered, fully inside the frame, thumbnail-ready, no text overlay.",
-    "Quality guardrails: preserve the same body part, same tattoo scale, same stencil geometry, same ink palette, natural skin texture, and realistic anatomy from start to finish.",
-    "Avoid: fake overlay tattoos, stickers, body paint, unrelated drawings, full body framing, extra fingers, duplicated hands, warped limbs, rubber skin, excessive blood, nudity, unsafe needle behavior, early full stencil reveal, captions, logos, watermarks, blur, flicker, and AI morphing.",
+    "Quality guardrails: preserve the same body part, same tattoo scale, same stencil geometry, same ink palette, natural skin texture, and realistic adult anatomy from start to finish.",
+    TATTOO_NEGATIVE_RULE,
   ].join(" ");
 }

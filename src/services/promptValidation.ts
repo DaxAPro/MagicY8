@@ -174,11 +174,11 @@ export function getPromptIdeaFeedback(input: string, toolType: ToolType): Prompt
 }
 
 export function improvePromptIdea(input: string, toolType: ToolType): string {
-  const trimmed = input.trim();
+  const trimmed = normalizeSensitiveIdeaTerms(input.trim(), toolType);
   const fallback =
     toolType === "nails_video"
       ? "custom nail art based exactly on the user idea with clear readable motifs and glossy final reveal"
-      : "custom tattoo design based exactly on the user idea, inked on the selected body part with cinematic macro reveal";
+      : "professional real tattoo design based exactly on the user idea, inked on the selected adult subject body part with cinematic macro reveal";
   if (!trimmed || normalizedWords(trimmed).some(looksLikeRandomToken)) return fallback;
 
   const words = normalizedWords(trimmed);
@@ -191,8 +191,20 @@ export function improvePromptIdea(input: string, toolType: ToolType): string {
   const suffix =
     toolType === "nails_video"
       ? "as clear nail-art motifs with glossy macro reveal and clean final hero shot"
-      : "as an actual inked tattoo on skin with cinematic macro reveal and clean final hero shot";
+      : "as an actual professional tattoo inked into skin by a real tattoo machine, on a clearly adult subject age 25+, with cinematic macro reveal and clean final hero shot";
   return `${trimmed} ${suffix}`.replace(/\s+/g, " ").trim();
+}
+
+function normalizeSensitiveIdeaTerms(input: string, toolType: ToolType): string {
+  if (toolType !== "tattoo_video") return input;
+  return input
+    .replace(/\bschool\s*girl\b/gi, "adult woman age 25+ in tasteful fashion-editorial styling")
+    .replace(/\bschool\s*boy\b/gi, "adult man age 25+ in tasteful fashion-editorial styling")
+    .replace(/\bgirls?\b/gi, "adult woman age 25+")
+    .replace(/\bboys?\b/gi, "adult man age 25+")
+    .replace(/\bteen(?:ager)?s?\b/gi, "adult subject age 25+")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function preparePromptIdeaForGeneration(input: string, toolType: ToolType): string {
@@ -200,7 +212,7 @@ export function preparePromptIdeaForGeneration(input: string, toolType: ToolType
   if (!trimmed) return improvePromptIdea("", toolType);
 
   const feedback = getPromptIdeaFeedback(trimmed, toolType);
-  if (feedback.label === "Strong") return trimmed;
+  if (feedback.label === "Strong") return normalizeSensitiveIdeaTerms(trimmed, toolType);
   return feedback.suggestion;
 }
 
@@ -246,11 +258,33 @@ export function validatePromptIdea(input: string, toolType: ToolType): string | 
 }
 
 export function normalizeGeneratedPrompt(prompt: string, toolType: ToolType): string {
+  if (toolType === "tattoo_video") {
+    const normalized = normalizeSensitiveIdeaTerms(prompt, toolType)
+      .replace(/\b8s\b/g, "10s")
+      .replace(/\b8-second\b/gi, "10-second")
+      .replace(/\b8 seconds\b/gi, "10 seconds");
+
+    const hasAdultRule = /\badult (woman|man|subject).*(age (21|25)\+|25\+|21\+)/i.test(normalized);
+    const hasProcessRule = /\b(tattoo machine|needle).*\b(skin|ink)\b/i.test(normalized);
+    const guardrails = [
+      hasAdultRule ? "" : "Subject guardrail: clearly adult subject age 25+, polished glamorous fashion-editorial styling, no school uniform, no teenage or minor-looking presentation.",
+      hasProcessRule ? "" : "Process guardrail: show a real tattoo machine needle contacting skin, stencil transfer or cropped outline, ink entering skin, controlled linework, shading or color pass, and final skin-safe wipe.",
+      "Avoid: fake tattoo sticker, body paint, makeup drawing, marker drawing, projected overlay, temporary transfer, random scribbles, botched tattoo, schoolgirl styling, school uniform, underage look, nudity, gore, captions, logos, watermarks, blur, flicker, and AI morphing.",
+    ].filter(Boolean);
+
+    return guardrails.length ? `${normalized} ${guardrails.join(" ")}` : normalized;
+  }
+
   if (toolType !== "nails_video") return prompt;
-  return prompt
+  const normalized = prompt
     .replace(/\b8s\b/g, "10s")
     .replace(/\b8-second\b/gi, "10-second")
-    .replace(/\b8 seconds\b/gi, "10 seconds");
+    .replace(/\b8 seconds\b/gi, "10 seconds")
+    .replace(/one clear adult finger or one clean set of five fingers only when needed/gi, "exactly one adult fingernail on one natural finger only");
+
+  if (/\bexactly one adult fingernail\b/i.test(normalized)) return normalized;
+
+  return `${normalized} Anatomy guardrail: show exactly one adult fingernail on one natural finger, cropped from fingertip to first knuckle only; keep the palm, other fingers, whole hand, wrist, extra fingers, missing fingers, fused fingers, six or seven fingers, duplicated nails, and second hands out of frame.`;
 }
 
 export function normalizeFormDataForSave<T extends Record<string, unknown>>(

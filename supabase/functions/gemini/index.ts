@@ -14,6 +14,21 @@ const GROQ_API_BASE = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models";
 const REQUEST_TIMEOUT_MS = 30_000;
 
+const NAIL_SINGLE_FINGER_RULE =
+  "Show exactly one adult fingernail on one natural finger, cropped from fingertip to first knuckle only. Keep the palm, other fingers, whole hand, wrist, and duplicate nail beds out of frame.";
+
+const NAIL_ANATOMY_AVOID =
+  "Avoid full hands, five-finger hand poses, palms, wrists, extra fingers, missing fingers, fused fingers, six or seven fingers, duplicated nails, second hands, warped finger shapes, swollen cuticles, changing nail length, and changing nail shape.";
+
+const TATTOO_SUBJECT_RULE =
+  "Clearly adult subject age 25+, polished glamorous fashion-editorial styling, confident elegant posture, realistic adult anatomy, tasteful wardrobe or draping only where needed for the selected tattoo area.";
+
+const TATTOO_PROCESS_RULE =
+  "Show a real professional tattoo machine needle contacting skin, stencil transfer or cropped outline, ink entering skin, controlled linework, shading or color pass, ink settling naturally, and a final skin-safe wipe.";
+
+const TATTOO_AVOID_RULE =
+  "Avoid fake tattoo stickers, body paint, makeup drawing, marker drawing, projected overlays, temporary transfers, random unrelated drawings, botched tattoos, schoolgirl styling, school uniforms, teenage or minor-looking subjects, nudity, gore, excessive blood, unsafe needle behavior, full tattoo visible at the start, captions, logos, watermarks, blur, flicker, and AI morphing.";
+
 // ─── Google Sheets webhook (server-side secret, never exposed to browser) ──
 const GOOGLE_SHEETS_WEBHOOK_URL =
   Deno.env.get("GOOGLE_SHEETS_WEBHOOK_URL") ?? "";
@@ -462,6 +477,39 @@ function hasUnsafeFailLookStyle(text: string): boolean {
   return false;
 }
 
+function hasPositiveMultiFingerFraming(text: string): boolean {
+  const pattern = /\b(full hand|whole hand|hands|five fingers|all fingers|set of five|palm|wrist|manicure hand pose|hand model)\b/gi;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    const before = text.slice(Math.max(0, match.index - 70), match.index).toLowerCase();
+    if (/\b(avoid|no|not|never|without|prevent|exclude|must avoid|do not|keep .* out of frame)\b/.test(before)) {
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
+function hasPositiveForbiddenTattooLook(text: string): boolean {
+  const pattern = /\b(girl|boy|teen(?:ager)?|schoolgirl|schoolboy|school uniform|minor-looking|fake tattoo|tattoo sticker|sticker tattoo|body paint|makeup drawing|marker drawing|temporary transfer|projected overlay)\b/gi;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    const before = text.slice(Math.max(0, match.index - 80), match.index).toLowerCase();
+    if (/\b(avoid|no|not|never|without|prevent|exclude|must avoid|do not|instead of|not a|not as)\b/.test(before)) {
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
+function lacksRealTattooProcess(text: string): boolean {
+  const lower = text.toLowerCase();
+  const hasMachine = /\b(tattoo machine|needle)\b/.test(lower);
+  const hasSkinInk = /\b(ink entering skin|ink enters skin|needle contacting skin|needle touches skin|needle touching skin|skin-safe wipe|stencil transfer)\b/.test(lower);
+  return !(hasMachine && hasSkinInk);
+}
+
 /** Count meaningful production-detail tokens added vs the original */
 function countAddedDetails(original: string, improved: string): number {
   const origTokens = new Set(tokenize(original));
@@ -484,6 +532,7 @@ function validatePromptQuality(
   previousPrompt?: string,
   format?: string,
   duration?: string,
+  toolType?: string,
 ): QualityCheckResult {
   if (!generated || generated.trim().length < 10) {
     return { passed: false, reason: "empty_or_short" };
@@ -504,6 +553,18 @@ function validatePromptQuality(
 
   if (hasUnsafeFailLookStyle(generated)) {
     return { passed: false, reason: "forbidden_fail_look_style" };
+  }
+
+  if (format === "video" && duration && hasPositiveMultiFingerFraming(generated)) {
+    return { passed: false, reason: "nail_prompt_requests_multi_finger_framing" };
+  }
+
+  if (toolType === "tattoo_video" && hasPositiveForbiddenTattooLook(generated)) {
+    return { passed: false, reason: "tattoo_prompt_has_underage_or_fake_tattoo_look" };
+  }
+
+  if (toolType === "tattoo_video" && lacksRealTattooProcess(generated)) {
+    return { passed: false, reason: "tattoo_prompt_missing_real_needle_ink_process" };
   }
 
   if (/\b(full (lion|portrait|flower|butterfly|mandala|tattoo|nail) (is )?(visible|shown)|complete (design|art|artwork) (at|in) the (start|beginning|opening|first frame))\b/i.test(generated)) {
@@ -642,7 +703,8 @@ function buildAiSystemInstruction(format: string, target: string): string {
   lines.push("MISTAKE PREVENTION CHECKLIST:");
   lines.push("- No contradictory camera motion such as static locked-off plus fast orbit in the same shot");
   lines.push("- No impossible anatomy, melting objects, duplicated subjects, or changing object identity");
-  lines.push("- Extreme macro on one fingernail only; no full hands, extra fingers, missing fingers, fused fingers, duplicated nails, warped cuticles, or changing nail length/shape");
+  lines.push(`- ${NAIL_SINGLE_FINGER_RULE}`);
+  lines.push(`- ${NAIL_ANATOMY_AVOID}`);
   lines.push("- No vague filler such as cinematic masterpiece, ultra-detailed, or best quality");
   lines.push("- No missing duration, missing 9:16 vertical format, or missing final payoff");
   lines.push("- No captions, watermarks, UI text, logos, or subtitles unless explicitly requested");
@@ -695,7 +757,8 @@ function buildAiUserInstruction(data: Record<string, unknown>, previousPrompt?: 
   lines.push(`Process style: ${processStyleInstruction("nails_video", processStyle)}`);
   lines.push(`Color mode: ${colorModeInstruction("nails_video", colorMode)}`);
   lines.push("Curiosity rule: do not let the viewer identify the final nail design in the opening. Show cropped macro fragments first, then connect them into the full design only in the final 1.5-2 seconds.");
-  lines.push("Anatomy rule: show one stable adult finger and one nail only; avoid full hands, extra fingers, warped nails, changing nail shape, and AI-looking morphs.");
+  lines.push(`Anatomy rule: ${NAIL_SINGLE_FINGER_RULE} ${NAIL_ANATOMY_AVOID} Avoid AI-looking morphs.`);
+  lines.push("Beauty rule: improve the idea with premium salon styling, clean composition, realistic tool steps, glossy finish, and a strong final thumbnail; do not merely enlarge or restate the user's words.");
   lines.push(`Shot design: ${shotType}`);
   lines.push(`Motion pace: ${motionPace}`);
   lines.push(`Lighting preference: ${lighting}`);
@@ -739,6 +802,7 @@ function buildAiRetryInstruction(
   userLines.push(`Process style: ${processStyleInstruction("nails_video", String(data.revealStyle ?? "mystery_macro_build"))}`);
   userLines.push(`Color mode: ${colorModeInstruction("nails_video", String(data.colorMode ?? "soft_pastel"))}`);
   userLines.push("Do not show the complete nail art at the start. Use macro fragments, fast realistic brush/tool steps, then a final pullback.");
+  userLines.push(`Anatomy rule: ${NAIL_SINGLE_FINGER_RULE} ${NAIL_ANATOMY_AVOID}`);
   userLines.push("Preserve the concept while SUBSTANTIALLY improving the production detail and wording.");
   userLines.push("The output must be meaningfully different from both the original Core Idea and any previous generation.");
   if (previousPrompt) {
@@ -765,9 +829,9 @@ function buildTattooSystemInstruction(): string {
   lines.push("Generate ONE coherent, choreographed tattoo process video prompt with a clear cinematic mini-story structure.");
   lines.push("");
   lines.push("ADULT MODEL PRESENTATION (mandatory):");
-  lines.push("Every tattoo video must feature one clearly adult subject, age 21 or older, matching the selected subject gender.");
+  lines.push(`Every tattoo video must feature one clearly adult subject. ${TATTOO_SUBJECT_RULE}`);
   lines.push("Describe the subject in generator-friendly language as:");
-  lines.push("- An attractive adult subject, age 21+");
+  lines.push("- An attractive adult subject, age 25+");
   lines.push("- Fit, toned or naturally shaped silhouette");
   lines.push("- Confident and elegant body language");
   lines.push("- Natural skin texture and realistic anatomy");
@@ -775,12 +839,14 @@ function buildTattooSystemInstruction(): string {
   lines.push("- Flattering but non-explicit wardrobe or professional draping");
   lines.push("- Glamorous beauty-commercial lighting, confident elegant posture, polished styling, and premium studio atmosphere");
   lines.push("- No nudity, no exposed intimate areas, no pornographic or explicit sexual presentation");
-  lines.push("Never use the words 'girl' or 'boy'. Always specify adult woman age 21+ or adult man age 21+, based on the selected subject.");
+  lines.push("Never use the words 'girl', 'boy', 'teen', 'schoolgirl', or 'schoolboy'. Always specify adult woman age 25+ or adult man age 25+, based on the selected subject.");
+  lines.push("Never use school uniforms, classroom styling, student costumes, childish styling, or minor-looking presentation.");
   lines.push("The result should feel visually attractive and glamorous, not clinical or boring, while remaining tasteful and suitable for mainstream AI video generators.");
   lines.push("");
   lines.push("CINEMATIC STORY STRUCTURE (for a 10-second clip):");
   lines.push("STYLE OVERRIDE: Do NOT create botched, ugly, fail-looking, chaotic scribble, black ink blob, wipe-off trick, one-step trick, or sudden magic appearance videos.");
-  lines.push("The tattoo must be created step by step as a premium professional art process: preparation, extreme macro fragments, partial stencil or cropped outline, rapid linework, shading or color pass, final detail, then the complete finished-art hero view.");
+  lines.push(`The tattoo must be created step by step as a premium professional art process. ${TATTOO_PROCESS_RULE}`);
+  lines.push("The tattoo must be actual ink in skin, never a sticker, body paint, marker drawing, makeup drawing, projected overlay, or temporary transfer.");
   lines.push("Never show the complete finished art or full stencil in the first 60-70% of the clip. The viewer should see controlled progress and mystery, not a mistake or a mess.");
   lines.push("Make the tattoo appear quickly in satisfying visible steps, like an image being generated live, but through realistic tattoo needle passes and normal ink behavior.");
   lines.push("Keep the final subject impossible to identify until the final 2 seconds by using cropped macro fragments, partial curves, texture strokes, and shading details.");
@@ -825,12 +891,12 @@ function buildTattooSystemInstruction(): string {
   lines.push("One continuous choreographed shot is preferred, but it must contain visible progression and changing composition.");
   lines.push("");
   lines.push("NEGATIVE (must avoid):");
-  lines.push("Minor-looking subjects, deformed anatomy, warped torso or limbs, full-body framing, extra or missing fingers, duplicated hands, floating tattoo equipment, needle passing through the body, tattoo appearing on the wrong body area, tattoo changing shape color or placement, full tattoo visible at the start, design suddenly appearing without visible tool steps, AI-looking morphing, melting skin, excessive blood, gore, nudity, explicit sexual content, fetish framing, camera remaining in one unchanging close-up, artist's hand covering the tattoo during the final view, cropped final artwork, blurry final view, text, subtitles, logos, watermarks, flickering, jumping anatomy, inconsistent lighting.");
+  lines.push(`${TATTOO_AVOID_RULE} Deformed anatomy, warped torso or limbs, full-body framing, extra or missing fingers, duplicated hands, floating tattoo equipment, needle passing through the body, tattoo appearing on the wrong body area, tattoo changing shape color or placement, design suddenly appearing without visible tool steps, explicit sexual content, fetish framing, camera remaining in one unchanging close-up, artist's hand covering the tattoo during the final view, cropped final artwork, blurry final view, jumping anatomy, inconsistent lighting.`);
   lines.push("");
   lines.push("MISTAKE PREVENTION CHECKLIST:");
   lines.push("- Never crop, blur, cover, or hide the final tattoo during the final two seconds");
   lines.push("- Never move the tattoo to a different body part or change its shape/color midway");
-  lines.push("- Never describe a minor-looking person, girl, boy, teenager, or school-age subject");
+  lines.push("- Never describe a minor-looking person, girl, boy, teenager, school-age subject, school uniform, fake sticker tattoo, body paint, marker drawing, or temporary transfer");
   lines.push("- Use tight macro framing on the selected tattoo area only; no full body, no warped limbs, no duplicated body parts, and no unnecessary visible fingers");
   lines.push("- Never use random jump cuts, impossible needle contact, duplicated hands, or floating tools");
   lines.push("- Never repeat the same macro fragment sequence, build rhythm, camera path, or final pullback when a previous prompt is provided");
@@ -859,8 +925,8 @@ function buildTattooUserInstruction(
   const processStyle = String(data.revealStyle ?? "mystery_macro_build");
   const colorMode = String(data.colorMode ?? "black_grey");
   const subjectGender = String(data.subjectGender ?? "woman") === "man"
-    ? "adult man, age 21+"
-    : "adult woman, age 21+";
+    ? "adult man, age 25+"
+    : "adult woman, age 25+";
   const variationSeed = String(data.variationSeed ?? "").slice(0, 80);
 
   const lines: string[] = [];
@@ -876,11 +942,12 @@ function buildTattooUserInstruction(
   lines.push(`Process style: ${processStyleInstruction("tattoo_video", processStyle)}`);
   lines.push(`Color mode: ${colorModeInstruction("tattoo_video", colorMode)}`);
   lines.push("Curiosity rule: do not let the viewer identify the final tattoo subject in the opening. Show only tight macro fragments first, then connect them into the complete design only in the final 2 seconds.");
-  lines.push("Attractive safe styling: describe a glamorous attractive adult subject age 21+ with tasteful wardrobe and beauty-commercial lighting, but keep framing focused on the tattoo area and non-explicit.");
+  lines.push(`Attractive safe styling: ${TATTOO_SUBJECT_RULE} Keep framing focused on the tattoo area and non-explicit.`);
+  lines.push(`Real tattoo process: ${TATTOO_PROCESS_RULE} The tattoo must be actual ink in skin, never a fake overlay, sticker, body paint, marker drawing, makeup drawing, projected overlay, or temporary transfer.`);
   lines.push("Anatomy rule: show one selected body part in a stable pose; avoid full body, warped limbs, duplicated hands, extra fingers, rubber skin, and AI-looking morphs.");
   lines.push(`Aspect ratio: ${ratio}`);
   lines.push(`Duration: 10 seconds (fixed)`);
-  lines.push("Must avoid mistakes: cropped final artwork, covered final tattoo, wrong body part, underage wording, nudity, gore, repeated video structure, inconsistent tattoo design, and generic quality stuffing.");
+  lines.push(`Must avoid mistakes: cropped final artwork, covered final tattoo, wrong body part, underage wording, fake tattoo methods, nudity, gore, repeated video structure, inconsistent tattoo design, and generic quality stuffing. ${TATTOO_AVOID_RULE}`);
   if (variationSeed) {
     lines.push(`Variation seed: ${variationSeed}`);
     lines.push("Use the seed only to choose a fresh macro fragment sequence, camera path, build rhythm, lighting behavior, and final payoff. Do not include the seed in the final prompt.");
@@ -922,6 +989,9 @@ function buildTattooRetryInstruction(
   userLines.push(`Process style: ${processStyleInstruction("tattoo_video", String(data.revealStyle ?? "mystery_macro_build"))}`);
   userLines.push(`Color mode: ${colorModeInstruction("tattoo_video", String(data.colorMode ?? "black_grey"))}`);
   userLines.push("Do not show the complete tattoo or full stencil at the start. Use macro fragments, fast realistic needle/tool steps, then a final pullback.");
+  userLines.push(`Adult subject rule: ${TATTOO_SUBJECT_RULE}`);
+  userLines.push(`Real tattoo process rule: ${TATTOO_PROCESS_RULE}`);
+  userLines.push(`Avoid: ${TATTOO_AVOID_RULE}`);
   userLines.push("");
   userLines.push("Preserve the concept while SUBSTANTIALLY improving the cinematic detail, visible step-by-step art creation, and the final finished-art hero view.");
   if (previousPrompt) {
@@ -1176,7 +1246,7 @@ function buildLocalNailsPrompt(data: Record<string, unknown>, recentPrompts: str
     "Build the art in fast readable passes without AI morphing, melting polish, duplicated nails, or changing nail shape.",
     "Let the final pattern connect only during the last 1.5 seconds, then hold a sharp social-media thumbnail frame.",
   ];
-  return `A 9:16 vertical ${duration} AI video prompt for Google Flow. ${hooks[variant]} Create ${nailStyle} on a ${nailShape} nail using ${nailColor}. Core idea: ${coreIdea}. ${trendLine} Video style: ${processStyleInstruction("nails_video", processStyle)} Color mode: ${colorModeInstruction("nails_video", colorMode)} Camera: ${camera}; lighting: ${lighting}. ${buildBeats[variant]} Show only one stable adult finger and one nail; avoid full hands, extra fingers, warped cuticles, changing nail length, messy failure looks, random scribbles, wipe-away tricks, captions, logos, and watermarks. The final 1.5-2 seconds must be the first clean full finished nail-art hero view, sharp, glossy, centered, and fully inside the frame.`;
+  return `A 9:16 vertical ${duration} AI video prompt for Google Flow. ${hooks[variant]} Create ${nailStyle} on a ${nailShape} nail using ${nailColor}. Core idea: ${coreIdea}. ${trendLine} Video style: ${processStyleInstruction("nails_video", processStyle)} Color mode: ${colorModeInstruction("nails_video", colorMode)} Camera: ${camera}; lighting: ${lighting}; stable fingertip macro framing. ${buildBeats[variant]} ${NAIL_SINGLE_FINGER_RULE} ${NAIL_ANATOMY_AVOID} Keep the result elegant, clean, glossy, and thumbnail-ready instead of a plain enlarged prompt. Avoid messy failure looks, random scribbles, wipe-away tricks, captions, logos, watermarks, blur, flicker, and AI morphing. The final 1.5-2 seconds must be the first clean full finished nail-art hero view, sharp, glossy, centered, and fully inside the frame.`;
 }
 
 function buildLocalTattooPrompt(data: Record<string, unknown>, recentPrompts: string[], onlineTrends: TrendIdea[], previousPrompt?: string): string {
@@ -1184,7 +1254,7 @@ function buildLocalTattooPrompt(data: Record<string, unknown>, recentPrompts: st
   const tattooStyle = String(data.tattooStyle ?? "Realistic");
   const bodyPart = String(data.bodyPartDescription ?? data.bodyPartLabel ?? data.bodyPart ?? "the outer forearm");
   const inkStyle = String(data.inkStyle ?? "Black ink");
-  const subjectGender = String(data.subjectGender ?? "woman") === "man" ? "adult man age 21+" : "adult woman age 21+";
+  const subjectGender = String(data.subjectGender ?? "woman") === "man" ? "adult man age 25+" : "adult woman age 25+";
   const camera = String(data.cameraMovement ?? "Macro close-up");
   const lighting = String(data.lighting ?? "Studio rim lighting");
   const processStyle = String(data.revealStyle ?? "mystery_macro_build");
@@ -1208,7 +1278,7 @@ function buildLocalTattooPrompt(data: Record<string, unknown>, recentPrompts: st
     "Show satisfying professional process, not a botched tattoo, not a chaotic scribble, and not a wipe-away hidden-art trick.",
     "End with an unobstructed, sharp, fully framed finished tattoo suitable as a vertical social-media thumbnail.",
   ];
-  return `A 9:16 vertical 10-second AI video prompt for Google Flow. ${hooks[variant]} Subject: glamorous ${subjectGender}, tasteful non-explicit styling, natural skin texture, stable anatomy. Tattoo concept: ${coreIdea}. Placement: ${bodyPart}. Style: ${tattooStyle}; ink: ${inkStyle}. ${trendLine} Video style: ${processStyleInstruction("tattoo_video", processStyle)} Color mode: ${colorModeInstruction("tattoo_video", colorMode)} Camera: ${camera}; lighting: ${lighting}. ${buildBeats[variant]} Avoid full body framing, extra fingers, duplicated hands, warped limbs, rubber skin, excessive blood, nudity, captions, logos, watermarks, AI morphing, and any full tattoo or full stencil visible at the start. The final two seconds must be the first complete finished-art hero view, unobstructed and fully inside the frame.`;
+  return `A 9:16 vertical 10-second AI video prompt for Google Flow. ${hooks[variant]} Subject: glamorous ${subjectGender}; ${TATTOO_SUBJECT_RULE} Tattoo concept: ${coreIdea}. Placement: ${bodyPart}. Style: ${tattooStyle}; ink: ${inkStyle}. ${trendLine} Video style: ${processStyleInstruction("tattoo_video", processStyle)} ${TATTOO_PROCESS_RULE} The tattoo is actual ink in skin, never a sticker, body paint, marker drawing, projected overlay, or temporary transfer. Color mode: ${colorModeInstruction("tattoo_video", colorMode)} Camera: ${camera}; lighting: ${lighting}. ${buildBeats[variant]} ${TATTOO_AVOID_RULE} Avoid full body framing, extra fingers, duplicated hands, warped limbs, rubber skin, and any full tattoo or full stencil visible at the start. The final two seconds must be the first complete finished-art hero view, unobstructed and fully inside the frame.`;
 }
 
 async function generateLocalPrompt(payload: GenerateLocalPromptPayload): Promise<Response> {
@@ -1399,7 +1469,7 @@ async function generatePrompt(payload: GeneratePromptPayload, apiKey: string): P
     // Quality validation
     const format = String(data.format ?? "video");
     const duration = isTattoo ? "10s" : String(data.duration ?? "8s");
-    let quality = validatePromptQuality(coreIdea, result.text, previousPrompt, format, isTattoo ? undefined : duration);
+    let quality = validatePromptQuality(coreIdea, result.text, previousPrompt, format, isTattoo ? undefined : duration, payload.toolType);
 
     // Up to two automatic corrective rewrite passes if quality checks fail.
     for (let attempt = 1; !quality.passed && attempt <= 2; attempt++) {
@@ -1419,7 +1489,7 @@ async function generatePrompt(payload: GeneratePromptPayload, apiKey: string): P
       result = await callGroqWithFallback(retryMessages, requestId, apiKey, 1024, attempt === 1 ? 0.8 : 0.7);
 
       // Re-validate
-      quality = validatePromptQuality(coreIdea, result.text, previousPrompt, format, isTattoo ? undefined : duration);
+      quality = validatePromptQuality(coreIdea, result.text, previousPrompt, format, isTattoo ? undefined : duration, payload.toolType);
       if (!quality.passed) {
         safeLog({
           event: "quality_check_failed_retry",
