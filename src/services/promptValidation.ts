@@ -84,18 +84,18 @@ const MEANINGFUL_TERMS = new Set([...NAIL_TERMS, ...TATTOO_TERMS, ...VISUAL_TERM
 
 const IDEA_EXPANSIONS: Record<ToolType, Record<string, string>> = {
   nails_video: {
-    aura: "aura nails with glossy airbrushed glow and pearl highlights in colors from the user idea",
-    butterfly: "butterfly nail art with clear wing motifs, colors chosen from the user idea, and glossy macro reveal",
+    aura: "aura manicure with glossy airbrushed glow and pearl highlights in colors from the user idea, with no lettering",
+    butterfly: "butterfly manicure with clear wing shapes, colors chosen from the user idea, and glossy macro reveal, with no text on the nail",
     chrome: "chrome French tip nails with mirror shine and colors chosen from the user idea",
-    dragon: "tiny dragon accent nail art with clean linework and glossy final reveal",
-    flower: "delicate flower nail art with colors from the requested flower and clean glossy finish",
+    dragon: "tiny dragon accent manicure with clean pictorial linework and glossy final reveal, with no letters or words",
+    flower: "delicate flower manicure with colors from the requested flower and clean glossy finish, with no lettering",
     heart: "heart accent nails with colors chosen from the user idea and soft beauty lighting",
     rose: "rose flower nail art with rose-inspired colors and glossy salon finish",
-    cat: "cat themed nail art with tiny cat face, ears, whiskers, paw-print details, and glossy macro reveal",
-    ocean: "ocean and sea themed nail art with blue waves, foam, shell accents, and glossy water reflections",
-    panda: "panda themed nail art with clear black-white panda face, ears, paw details, and glossy final reveal",
-    sea: "sea themed nail art with blue ocean waves, foam, shell accents, and glossy water reflections",
-    wave: "ocean wave nail art with blue water movement, foam edges, and glossy macro reveal",
+    cat: "cat themed manicure with tiny cat face, ears, whiskers, paw-print details, and glossy macro reveal, with no text",
+    ocean: "ocean and sea themed manicure with blue waves, foam, shell accents, and glossy water reflections, with no lettering",
+    panda: "panda themed manicure with clear black-white panda face, ears, paw details, and glossy final reveal, with no text",
+    sea: "sea themed manicure with blue ocean waves, foam, shell accents, and glossy water reflections, with no lettering",
+    wave: "ocean wave manicure with blue water movement, foam edges, and glossy macro reveal, with no lettering",
     star: "star accent nails with colors chosen from the user idea and glossy macro reveal",
   },
   tattoo_video: {
@@ -177,7 +177,7 @@ export function improvePromptIdea(input: string, toolType: ToolType): string {
   const trimmed = normalizeSensitiveIdeaTerms(input.trim(), toolType);
   const fallback =
     toolType === "nails_video"
-      ? "custom nail art based exactly on the user idea with clear readable motifs and glossy final reveal"
+      ? "custom decorative manicure based exactly on the user idea with clear pictorial motifs, glossy final reveal, and no lettering"
       : "professional real tattoo design based exactly on the user idea, inked on the selected adult subject body part with cinematic macro reveal";
   if (!trimmed || normalizedWords(trimmed).some(looksLikeRandomToken)) return fallback;
 
@@ -190,7 +190,7 @@ export function improvePromptIdea(input: string, toolType: ToolType): string {
 
   const suffix =
     toolType === "nails_video"
-      ? "as clear nail-art motifs with glossy macro reveal and clean final hero shot"
+      ? "as clear decorative manicure motifs with glossy macro reveal, clean final hero shot, and no letters or words painted on the nail"
       : "as an actual professional tattoo inked into skin by a real tattoo machine, on a clearly adult subject age 25+, with cinematic macro reveal and clean final hero shot";
   return `${trimmed} ${suffix}`.replace(/\s+/g, " ").trim();
 }
@@ -269,7 +269,8 @@ export function normalizeGeneratedPrompt(prompt: string, toolType: ToolType): st
     const guardrails = [
       hasAdultRule ? "" : "Subject guardrail: clearly adult subject age 25+, polished glamorous fashion-editorial styling, no school uniform, no teenage or minor-looking presentation.",
       hasProcessRule ? "" : "Process guardrail: show a real tattoo machine needle contacting skin, stencil transfer or cropped outline, ink entering skin, controlled linework, shading or color pass, and final skin-safe wipe.",
-      "Avoid: fake tattoo sticker, body paint, makeup drawing, marker drawing, projected overlay, temporary transfer, random scribbles, botched tattoo, schoolgirl styling, school uniform, underage look, nudity, gore, captions, logos, watermarks, blur, flicker, and AI morphing.",
+      "Placement guardrail: keep the tattoo on the selected body part only; avoid chest, breast, cleavage, intimate-area, or torso-focused framing unless the user explicitly selected that body part.",
+      "Avoid: chest tattoos, breast or cleavage framing, fake tattoo sticker, body paint, makeup drawing, marker drawing, projected overlay, temporary transfer, random scribbles, repeated template tattoos, botched tattoo, messy ink blobs, schoolgirl styling, school uniform, underage look, nudity, gore, captions, logos, watermarks, blur, flicker, and AI morphing.",
     ].filter(Boolean);
 
     return guardrails.length ? `${normalized} ${guardrails.join(" ")}` : normalized;
@@ -282,9 +283,15 @@ export function normalizeGeneratedPrompt(prompt: string, toolType: ToolType): st
     .replace(/\b8 seconds\b/gi, "10 seconds")
     .replace(/one clear adult finger or one clean set of five fingers only when needed/gi, "exactly one adult fingernail on one natural finger only");
 
-  if (/\bexactly one adult fingernail\b/i.test(normalized)) return normalized;
+  const textGuardrail =
+    " Text guardrail: do not place any readable text, letters, words, labels, signatures, logos, captions, or typography on the nail; express the idea only through decorative shapes, colors, icons, shimmer, chrome, charms, and pictorial motifs.";
+  const hasAnatomyGuardrail = /\bexactly one adult fingernail\b/i.test(normalized);
+  const hasTextGuardrail = /\b(no|without|avoid|do not).{0,80}\b(text|letters|words|typography|logos)\b/i.test(normalized);
 
-  return `${normalized} Anatomy guardrail: show exactly one adult fingernail on one natural finger, cropped from fingertip to first knuckle only; keep the palm, other fingers, whole hand, wrist, extra fingers, missing fingers, fused fingers, six or seven fingers, duplicated nails, and second hands out of frame.`;
+  if (hasAnatomyGuardrail && hasTextGuardrail) return normalized;
+  if (hasAnatomyGuardrail) return `${normalized}${textGuardrail}`;
+
+  return `${normalized} Anatomy guardrail: show exactly one adult fingernail on one natural finger, cropped from fingertip to first knuckle only; keep the palm, other fingers, whole hand, wrist, extra fingers, missing fingers, fused fingers, six or seven fingers, duplicated nails, and second hands out of frame.${hasTextGuardrail ? "" : textGuardrail}`;
 }
 
 export function normalizeFormDataForSave<T extends Record<string, unknown>>(
