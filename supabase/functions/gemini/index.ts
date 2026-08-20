@@ -1448,8 +1448,9 @@ function buildLocalNailsPrompt(data: Record<string, unknown>, recentPrompts: str
   const lighting = String(data.lighting ?? "Soft beauty lighting");
   const processStyle = String(data.revealStyle ?? "mystery_macro_build");
   const colorMode = String(data.colorMode ?? "soft_pastel");
-  const variant = chooseLocalVariant(coreIdea + nailStyle + nailColor, recentPrompts, previousPrompt);
-  const trend = chooseTrendReference(coreIdea + nailStyle, onlineTrends, recentPrompts, previousPrompt);
+  const variationSeed = String(data.variationSeed ?? "");
+  const variant = chooseLocalVariant(coreIdea + nailStyle + nailColor + variationSeed, recentPrompts, previousPrompt);
+  const trend = chooseTrendReference(coreIdea + nailStyle + variationSeed, onlineTrends, recentPrompts, previousPrompt);
   const trendLine = trend ? `Trend reference: adapt the current ${trend.title} direction as a subtle style influence, while preserving the user's exact concept.` : "";
   const hooks = [
     "Start with extreme macro fragments of one clean adult fingernail: a tiny highlight, a cropped brush tip, and glossy texture only, so the final design cannot be guessed.",
@@ -1480,8 +1481,9 @@ function buildLocalTattooPrompt(data: Record<string, unknown>, recentPrompts: st
   const lighting = String(data.lighting ?? "Studio rim lighting");
   const processStyle = String(data.revealStyle ?? "mystery_macro_build");
   const colorMode = String(data.colorMode ?? "black_grey");
-  const variant = chooseLocalVariant(coreIdea + tattooStyle + bodyPart, recentPrompts, previousPrompt);
-  const trend = chooseTrendReference(coreIdea + tattooStyle, onlineTrends, recentPrompts, previousPrompt);
+  const variationSeed = String(data.variationSeed ?? "");
+  const variant = chooseLocalVariant(coreIdea + tattooStyle + bodyPart + variationSeed, recentPrompts, previousPrompt);
+  const trend = chooseTrendReference(coreIdea + tattooStyle + variationSeed, onlineTrends, recentPrompts, previousPrompt);
   const trendLine = trend ? `Trend reference: adapt the current ${trend.title} direction as a subtle style influence, while preserving the user's exact concept.` : "";
   const hooks = [
     "Start with extreme macro fragments: a needle tip, a partial curved line, skin texture, and a tiny stencil section only, so the final tattoo subject cannot be identified.",

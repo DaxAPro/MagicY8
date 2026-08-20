@@ -132,7 +132,8 @@ function buildNailsPrompt(data: Record<string, unknown>, previousPrompt?: string
   const lighting = String(data.lighting ?? "Soft beauty lighting");
   const processStyle = String(data.revealStyle ?? "mystery_macro_build");
   const colorMode = String(data.colorMode ?? "artist_choice");
-  const variant = chooseVariant(coreIdea + nailStyle + nailShape, previousPrompt);
+  const variationSeed = String(data.variationSeed ?? "");
+  const variant = chooseVariant(coreIdea + nailStyle + nailShape + variationSeed, previousPrompt);
   const trends = getLocalTrends("nails_video");
   const trend = trends[variant % trends.length] ?? LOCAL_NAIL_TRENDS[0];
   const learnedSnippet = getLearnedPromptMemory().nails_video.promptSnippets[variant];
@@ -180,7 +181,8 @@ function buildTattooPrompt(data: Record<string, unknown>, previousPrompt?: strin
   const lighting = String(data.lighting ?? "Studio rim lighting");
   const processStyle = String(data.revealStyle ?? "mystery_macro_build");
   const colorMode = String(data.colorMode ?? "artist_choice");
-  const variant = chooseVariant(coreIdea + tattooStyle + bodyPart, previousPrompt);
+  const variationSeed = String(data.variationSeed ?? "");
+  const variant = chooseVariant(coreIdea + tattooStyle + bodyPart + variationSeed, previousPrompt);
   const trends = getLocalTrends("tattoo_video");
   const trend = trends[variant % trends.length] ?? LOCAL_TATTOO_TRENDS[0];
   const learnedSnippet = getLearnedPromptMemory().tattoo_video.promptSnippets[variant];
