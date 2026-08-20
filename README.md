@@ -17,7 +17,7 @@ The live GitHub Pages site is Firebase-first:
 
 - Supabase is not required.
 - Google Sheets is not required.
-- Groq API key is optional.
+- Groq or Gemini API key is optional.
 - Prompt generation still works without an API key using the browser prompt engine.
 - Firebase Firestore saves generated prompts when Firebase config and Firestore rules are correct.
 
@@ -75,7 +75,7 @@ That means:
 
 Some legacy files remain for optional future integrations:
 
-- `supabase/` contains an old Edge Function path.
+- `supabase/` contains the optional AI connector Edge Function for Groq or Gemini keys.
 - `google-apps-script/` contains an old Google Sheets path.
 - `src/services/directGoogleSheets.ts` is optional and not part of the Firebase-first production flow.
 

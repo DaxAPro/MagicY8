@@ -5,6 +5,10 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/gemini`;
 
+function apiProviderForKey(apiKey: string): "groq" | "gemini" {
+  return apiKey.startsWith("gsk_") ? "groq" : "gemini";
+}
+
 export type ToolType = "nails_video" | "tattoo_video";
 
 export interface TrendIdea {
@@ -74,7 +78,11 @@ async function postJson<T>(body: unknown, apiKey?: string): Promise<T> {
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       apikey: SUPABASE_ANON_KEY,
     };
-    if (apiKey) headers["X-User-Groq-Key"] = apiKey;
+    if (apiKey) {
+      const provider = apiProviderForKey(apiKey);
+      headers["X-User-AI-Provider"] = provider;
+      headers[provider === "groq" ? "X-User-Groq-Key" : "X-User-Gemini-Key"] = apiKey;
+    }
 
     res = await fetch(FUNCTION_URL, {
       method: "POST",
@@ -131,7 +139,7 @@ export async function generatePrompt(
     previousPrompt,
   }, apiKey);
   if (!result.prompt || typeof result.prompt !== "string") {
-    throw new GeminiError("Groq returned an empty response.", 502, "empty");
+    throw new GeminiError("The AI provider returned an empty response.", 502, "empty");
   }
   return result;
 }

@@ -133,7 +133,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
   const handleTest = async () => {
     const keyToTest = savedKey ?? keyInput.trim()
     if (!keyToTest) {
-      setValidationError("Groq API key is optional. Without it, MagicY8 uses the browser prompt engine and saves to Firebase.")
+      setValidationError("Groq or Gemini API key is optional. Without it, MagicY8 uses the browser prompt engine and saves to Firebase.")
       return
     }
     const fmtErr = validateKeyFormat(keyToTest)
@@ -155,7 +155,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
       const result = await testGeminiConnection(keyToTest)
       if (result.ok) {
         setConnState("connected")
-        setTestMessage(result.model?.includes("Browser") ? "Firebase mode is ready. Prompts use the browser engine and save to Firebase." : "Connection successful! Groq is ready.")
+        setTestMessage(result.model?.includes("Browser") ? "Firebase mode is ready. Prompts use the browser engine and save to Firebase." : `Connection successful! ${result.model ?? "AI provider"} is ready.`)
       } else {
         setConnState("connection_failed")
         setTestMessage("Connection failed. Check your API key.")
@@ -224,7 +224,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
                 API Settings
               </DialogTitle>
               <Text textStyle="xs" color="gray.600" mt="0.5">
-                Firebase prompt database + optional Groq key
+                Firebase prompt database + optional Groq or Gemini key
               </Text>
             </Box>
           </HStack>
@@ -302,13 +302,13 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
             ) : (
               <VStack gap="2" align="stretch">
                 <Text textStyle="xs" color="gray.500" fontWeight="medium">
-                  Optional Groq API Key
+                  Optional Groq or Gemini API Key
                 </Text>
                 <HStack gap="2">
                   <Input
                     ref={inputRef}
                     type={showKey ? "text" : "password"}
-                    placeholder="gsk_..."
+                    placeholder="gsk_... or AIza..."
                     value={keyInput}
                     onChange={(e) => {
                       setKeyInput(e.target.value)

@@ -3,7 +3,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers":
-    "Content-Type, Authorization, X-Client-Info, Apikey, X-User-Groq-Key",
+    "Content-Type, Authorization, X-Client-Info, Apikey, X-User-AI-Provider, X-User-Groq-Key, X-User-Gemini-Key",
 };
 
 // ─── Model configuration (server-side only, fixed approved list) ──────────
@@ -12,6 +12,9 @@ const GROQ_FALLBACK_MODELS = ["openai/gpt-oss-20b"];
 
 const GROQ_API_BASE = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models";
+const GEMINI_PRIMARY_MODEL = "gemini-2.5-flash";
+const GEMINI_FALLBACK_MODELS = ["gemini-2.0-flash"];
+const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const REQUEST_TIMEOUT_MS = 30_000;
 
 const NAIL_SINGLE_FINGER_RULE =
@@ -141,6 +144,11 @@ type GroqChoice = { message?: { content?: string } };
 type GroqResponse = {
   choices?: GroqChoice[];
   error?: { message?: string; type?: string; code?: string };
+};
+
+type GeminiResponse = {
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  error?: { message?: string; status?: string; code?: number };
 };
 
 type CallResult = {
@@ -315,11 +323,28 @@ function colorModeInstruction(toolType: string, colorMode: string): string {
   return modes[colorMode] ?? modes.soft_pastel;
 }
 
-/** Extract user-provided key from custom header, never from env */
-function getUserKey(req: Request): string | null {
-  const key = req.headers.get("X-User-Groq-Key");
-  if (!key || !/^gsk_[A-Za-z0-9_-]{16,180}$/.test(key)) return null;
-  return key;
+type AiProvider = "groq" | "gemini";
+
+type UserCredential = {
+  provider: AiProvider;
+  key: string;
+};
+
+/** Extract user-provided key from custom headers, never from env. */
+function getUserCredential(req: Request): UserCredential | null {
+  const requestedProvider = req.headers.get("X-User-AI-Provider")?.toLowerCase();
+  const groqKey = req.headers.get("X-User-Groq-Key")?.trim() ?? "";
+  const geminiKey = req.headers.get("X-User-Gemini-Key")?.trim() ?? "";
+
+  if ((requestedProvider === "groq" || !requestedProvider) && /^gsk_[A-Za-z0-9_-]{16,180}$/.test(groqKey)) {
+    return { provider: "groq", key: groqKey };
+  }
+
+  if ((requestedProvider === "gemini" || !requestedProvider) && /^AIza[A-Za-z0-9_-]{20,180}$/.test(geminiKey)) {
+    return { provider: "gemini", key: geminiKey };
+  }
+
+  return null;
 }
 
 /**
@@ -347,9 +372,42 @@ class GroqCallError extends Error {
   }
 }
 
+class GeminiCallError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public errorBody?: string,
+  ) {
+    super(message);
+    this.name = "GeminiCallError";
+  }
+}
+
 interface GroqMessage {
   role: "system" | "user" | "assistant";
   content: string;
+}
+
+function geminiContentFromMessages(messages: GroqMessage[]): {
+  systemInstruction?: { parts: Array<{ text: string }> };
+  contents: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }>;
+} {
+  const systemText = messages
+    .filter((message) => message.role === "system")
+    .map((message) => message.content)
+    .join("\n\n")
+    .trim();
+  const contents = messages
+    .filter((message) => message.role !== "system")
+    .map((message) => ({
+      role: message.role === "assistant" ? "model" as const : "user" as const,
+      parts: [{ text: message.content }],
+    }));
+
+  return {
+    ...(systemText ? { systemInstruction: { parts: [{ text: systemText }] } } : {}),
+    contents: contents.length ? contents : [{ role: "user", parts: [{ text: "Generate the requested prompt." }] }],
+  };
 }
 
 /** Calls a single Groq model with the user's key. */
@@ -445,6 +503,116 @@ async function callGroqWithFallback(
     }
   }
   throw new GroqCallError("The configured Groq model is unavailable.", 503);
+}
+
+/** Calls a single Gemini model with the user's key. */
+async function callGeminiModel(
+  model: string,
+  messages: GroqMessage[],
+  apiKey: string,
+  maxTokens: number,
+  temperature: number,
+): Promise<string> {
+  const body = {
+    ...geminiContentFromMessages(messages),
+    generationConfig: {
+      temperature,
+      maxOutputTokens: maxTokens,
+    },
+  };
+
+  let res: Response;
+  try {
+    res = await fetch(`${GEMINI_API_BASE}/models/${model}:generateContent`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch {
+    throw new GeminiCallError("The AI request timed out.", 0);
+  }
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    let errMsg = `Gemini error (${res.status}).`;
+    try {
+      const parsed = JSON.parse(errText) as GeminiResponse;
+      if (parsed.error?.message) errMsg = parsed.error.message;
+    } catch { /* use default */ }
+    throw new GeminiCallError(errMsg, res.status, errText);
+  }
+
+  const data = await res.json().catch(() => null) as GeminiResponse | null;
+  if (!data) throw new GeminiCallError("Gemini returned an empty response.", 200);
+  if (data.error?.message) throw new GeminiCallError(data.error.message, data.error.code ?? res.status);
+
+  const text = data.candidates?.[0]?.content?.parts
+    ?.map((part) => part.text ?? "")
+    .join("")
+    .trim();
+  if (!text) throw new GeminiCallError("Gemini returned an empty response.", 200);
+  return text;
+}
+
+async function callGeminiWithFallback(
+  messages: GroqMessage[],
+  requestId: string,
+  apiKey: string,
+  maxTokens: number,
+  temperature: number,
+): Promise<CallResult> {
+  const modelsToTry = [GEMINI_PRIMARY_MODEL, ...GEMINI_FALLBACK_MODELS];
+  const maxAttempts = Math.min(modelsToTry.length, 2);
+
+  for (let i = 0; i < maxAttempts; i++) {
+    const model = modelsToTry[i];
+    const isFallback = i > 0;
+
+    try {
+      const text = await callGeminiModel(model, messages, apiKey, maxTokens, temperature);
+      safeLog({
+        event: "gemini_call",
+        requestId,
+        attemptedModel: model,
+        responseStatus: 200,
+        fallbackUsed: isFallback,
+        finalModel: model,
+      });
+      return { text, modelUsed: model, fallbackUsed: isFallback };
+    } catch (err) {
+      if (err instanceof GeminiCallError) {
+        safeLog({
+          event: "gemini_call",
+          requestId,
+          attemptedModel: model,
+          responseStatus: err.status,
+          fallbackUsed: isFallback,
+          finalModel: null,
+        });
+        const canFallback = i === 0 && shouldFallback(err.status, err.errorBody);
+        if (!canFallback) throw err;
+      } else {
+        throw err;
+      }
+    }
+  }
+  throw new GeminiCallError("The configured Gemini model is unavailable.", 503);
+}
+
+async function callAiWithFallback(
+  credential: UserCredential,
+  messages: GroqMessage[],
+  requestId: string,
+  maxTokens: number,
+  temperature: number,
+): Promise<CallResult> {
+  return credential.provider === "gemini"
+    ? callGeminiWithFallback(messages, requestId, credential.key, maxTokens, temperature)
+    : callGroqWithFallback(messages, requestId, credential.key, maxTokens, temperature);
 }
 
 // ─── Text normalization & quality validation ──────────────────────────────
@@ -1440,12 +1608,22 @@ function safeErrorMessage(err: unknown): { message: string; status: number } {
       default: return { message: redactKey(err.message), status: err.status };
     }
   }
-  return { message: "Could not connect to Groq.", status: 502 };
+  if (err instanceof GeminiCallError) {
+    switch (err.status) {
+      case 400: case 401: case 403: return { message: "The Gemini API key is invalid, blocked, or not allowed for this model.", status: 401 };
+      case 429: return { message: "Your Gemini account has reached its current rate limit.", status: 429 };
+      case 404: case 410: case 503: return { message: "The configured Gemini model is unavailable.", status: 503 };
+      case 0: return { message: "The AI request timed out.", status: 504 };
+      case 200: return { message: "Gemini returned an empty response.", status: 502 };
+      default: return { message: redactKey(err.message), status: err.status };
+    }
+  }
+  return { message: "Could not connect to the AI provider.", status: 502 };
 }
 
 // ─── Action handlers ──────────────────────────────────────────────────────
-async function getTrends(toolType: string, apiKey?: string): Promise<Response> {
-  if (!apiKey) {
+async function getTrends(toolType: string, credential?: UserCredential): Promise<Response> {
+  if (!credential) {
     const ideas = await fetchOnlineTrendIdeas(toolType);
     return json({ ideas, fallback: false, updatedAt: Date.now(), model: "Free online trend fetch" });
   }
@@ -1462,13 +1640,13 @@ async function getTrends(toolType: string, apiKey?: string): Promise<Response> {
 
   const requestId = generateRequestId();
   try {
-    const result = await callGroqWithFallback(
+    const result = await callAiWithFallback(
+      credential,
       [
         { role: "system", content: systemMsg },
         { role: "user", content: userMsg },
       ],
       requestId,
-      apiKey,
       1024,
       1.0,
     );
@@ -1482,7 +1660,7 @@ async function getTrends(toolType: string, apiKey?: string): Promise<Response> {
   }
 }
 
-async function generatePrompt(payload: GeneratePromptPayload, apiKey: string): Promise<Response> {
+async function generatePrompt(payload: GeneratePromptPayload, credential: UserCredential): Promise<Response> {
   if (!STARTUP_CONFIG.valid) {
     return errorJson("The configured Groq model is unavailable.", 503);
   }
@@ -1517,7 +1695,7 @@ async function generatePrompt(payload: GeneratePromptPayload, apiKey: string): P
 
   try {
     // First attempt
-    let result = await callGroqWithFallback(messages, requestId, apiKey, 1024, 0.85);
+    let result = await callAiWithFallback(credential, messages, requestId, 1024, 0.85);
 
     // Quality validation
     const format = String(data.format ?? "video");
@@ -1539,7 +1717,7 @@ async function generatePrompt(payload: GeneratePromptPayload, apiKey: string): P
         ? buildTattooRetryInstruction(data, previousPrompt, quality.reason ?? "quality")
         : buildAiRetryInstruction(data, previousPrompt, quality.reason ?? "quality");
 
-      result = await callGroqWithFallback(retryMessages, requestId, apiKey, 1024, attempt === 1 ? 0.8 : 0.7);
+      result = await callAiWithFallback(credential, retryMessages, requestId, 1024, attempt === 1 ? 0.8 : 0.7);
 
       // Re-validate
       quality = validatePromptQuality(coreIdea, result.text, previousPrompt, format, isTattoo ? undefined : duration, payload.toolType);
@@ -1606,15 +1784,32 @@ async function generatePrompt(payload: GeneratePromptPayload, apiKey: string): P
   }
 }
 
-async function healthCheck(apiKey: string): Promise<Response> {
+async function healthCheck(credential: UserCredential): Promise<Response> {
   if (!STARTUP_CONFIG.valid) {
-    return errorJson("The configured Groq model is unavailable.", 503);
+    return errorJson("The configured AI model is unavailable.", 503);
+  }
+
+  if (credential.provider === "gemini") {
+    try {
+      const text = await callGeminiModel(
+        GEMINI_PRIMARY_MODEL,
+        [{ role: "user", content: "Reply with exactly: ok" }],
+        credential.key,
+        8,
+        0,
+      );
+      if (!/\bok\b/i.test(text)) return errorJson("Gemini returned an unexpected response.", 502);
+      return json({ ok: true, model: GEMINI_PRIMARY_MODEL, fallbackModels: GEMINI_FALLBACK_MODELS });
+    } catch (err) {
+      const { message, status } = safeErrorMessage(err);
+      return errorJson(message, status);
+    }
   }
 
   try {
     const res = await fetch(GROQ_MODELS_URL, {
       method: "GET",
-      headers: { Authorization: `Bearer ${apiKey}` },
+      headers: { Authorization: `Bearer ${credential.key}` },
       signal: AbortSignal.timeout(10_000),
     });
 
@@ -1637,7 +1832,7 @@ async function healthCheck(apiKey: string): Promise<Response> {
 // ─── Retry Sheet Save handler ──────────────────────────────────────────────
 async function retrySheetSave(payload: RetrySheetSavePayload): Promise<Response> {
   if (!STARTUP_CONFIG.valid) {
-    return errorJson("The configured Groq model is unavailable.", 503);
+    return errorJson("The configured AI model is unavailable.", 503);
   }
 
   const generationId = String(payload.generationId ?? "").trim();
@@ -1715,16 +1910,16 @@ async function handleRequest(req: Request): Promise<Response> {
       if (toolType !== "nails_video" && toolType !== "tattoo_video") {
         return errorJson("Invalid toolType.", 400);
       }
-      return await getTrends(toolType, getUserKey(req) ?? undefined);
+      return await getTrends(toolType, getUserCredential(req) ?? undefined);
     }
 
     // Extract user-provided key from custom header
-    const userKey = getUserKey(req);
-    if (!userKey) {
-      return errorJson("Add your Groq API key in API Settings.", 401);
+    const userCredential = getUserCredential(req);
+    if (!userCredential) {
+      return errorJson("Add your Groq or Gemini API key in API Settings.", 401);
     }
 
-    if (action === "health_check") return await healthCheck(userKey);
+    if (action === "health_check") return await healthCheck(userCredential);
 
     if (action === "retry_sheet_save") {
       return await retrySheetSave(payload as RetrySheetSavePayload);
@@ -1734,7 +1929,7 @@ async function handleRequest(req: Request): Promise<Response> {
       return errorJson("Invalid toolType.", 400);
     }
 
-    return await generatePrompt(payload as GeneratePromptPayload, userKey);
+    return await generatePrompt(payload as GeneratePromptPayload, userCredential);
   } catch (err) {
     const msg = err instanceof Error ? redactKey(err.message) : "Internal server error.";
     return errorJson(msg, 500);
