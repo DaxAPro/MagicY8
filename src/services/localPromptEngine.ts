@@ -101,11 +101,14 @@ export function buildBrowserLocalPrompt(
 const NAIL_ANATOMY_RULE =
   "Subject framing: show exactly one adult fingernail on one natural finger, cropped from fingertip to first knuckle only. Keep the palm, other fingers, whole hand, wrist, and duplicate nail beds out of frame.";
 
+const NAIL_REALISM_RULE =
+  "Finger realism: the finger must look like a real healthy human finger with normal bone structure, soft skin, natural wrinkles, realistic knuckle crease, natural cuticle, and proportional nail bed; it must never look like a twig, branch, root, wooden stick, claw, melted tube, rubber limb, or plant stem.";
+
 const NAIL_TEXT_AVOID =
   "Text guardrail: the finished manicure must use only decorative polish shapes, color blocks, shimmer, chrome, dots, linework, charms, or tiny pictorial motifs; never write letters, words, labels, logos, typography, signatures, or readable text on the nail.";
 
 const NAIL_NEGATIVE_ANATOMY =
-  "Avoid: text on nails, readable words, letters, labels, typography, logos, captions, watermarks, full hands, five-finger hand poses, palms, wrists, extra fingers, missing fingers, fused fingers, six or seven fingers, duplicated nails, second hands, warped finger shapes, swollen cuticles, changing nail length, changing nail shape, melted polish, messy failure looks, random scribbles, early full reveal, blur, flicker, and AI morphing.";
+  "Avoid: text on nails, readable words, letters, labels, typography, logos, captions, watermarks, full hands, five-finger hand poses, palms, wrists, extra fingers, missing fingers, fused fingers, six or seven fingers, duplicated nails, second hands, warped finger shapes, twisted fingers, bent-back fingers, broken anatomy, branch-like fingers, twig-like fingers, root-like fingers, wooden-stick fingers, claw hands, rubber limbs, melted tubes, plant-stem skin, swollen cuticles, changing nail length, changing nail shape, melted polish, messy failure looks, random scribbles, early full reveal, blur, flicker, and AI morphing.";
 
 const TATTOO_SUBJECT_RULE =
   "Subject rule: clearly adult subject age 25+, polished glamorous fashion-editorial styling, confident elegant posture, realistic adult anatomy, tasteful wardrobe or draping only where needed for the selected tattoo area.";
@@ -158,10 +161,10 @@ function buildNailsPrompt(data: Record<string, unknown>, previousPrompt?: string
     `Opening hook: ${hooks[variant]}` ,
     `Process rule: ${processStyleInstruction("nails_video", processStyle)}. Show real nail-tool cause and effect: brush contact, gel thickness, chrome reflection, glitter placement, top-coat shine, and clean curing-like finish.`,
     `Color direction: ${colorModeInstruction("nails_video", colorMode)} Infer colors from the exact idea first; do not force pink, pastel, chrome, or pearl unless the user asked for them. Keep the palette intentional, premium, and consistent across every frame.`,
-    `Camera and light: ${camera}; ${lighting}; shallow depth of field, stable fingertip framing, glossy beauty-commercial texture, crisp highlights, no shaky drift.`,
+    `Camera and light: ${camera}; ${lighting}; shallow depth of field, stable fingertip-only framing, glossy beauty-commercial texture, crisp highlights, no shaky drift.`,
     `Timeline: ${buildBeats[variant]} Use a curiosity hook in the first second, satisfying progress in the middle, and one clean reveal at the end.`,
     `Final frame: the last 1.5-2 seconds must be the first clean full finished manicure hero view, sharp, glossy, centered, fully inside the frame, thumbnail-ready, no text overlay and no text painted on the nail.`,
-    `Quality guardrails: ${NAIL_ANATOMY_RULE} ${NAIL_TEXT_AVOID} Preserve the same single nail shape, natural cuticles, stable anatomy, same palette, and same design geometry from start to finish.`,
+    `Quality guardrails: ${NAIL_ANATOMY_RULE} ${NAIL_REALISM_RULE} ${NAIL_TEXT_AVOID} Preserve the same single nail shape, natural cuticles, stable anatomy, same palette, and same design geometry from start to finish.`,
     "Beauty standard: make the result elegant, clean, glossy, and thumbnail-ready, with refined salon styling instead of a plain enlarged prompt.",
     NAIL_NEGATIVE_ANATOMY,
   ].join(" ");

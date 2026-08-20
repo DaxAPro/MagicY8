@@ -285,13 +285,18 @@ export function normalizeGeneratedPrompt(prompt: string, toolType: ToolType): st
 
   const textGuardrail =
     " Text guardrail: do not place any readable text, letters, words, labels, signatures, logos, captions, or typography on the nail; express the idea only through decorative shapes, colors, icons, shimmer, chrome, charms, and pictorial motifs.";
+  const realismGuardrail =
+    " Finger realism guardrail: the finger must look like a real healthy human finger with normal bone structure, soft skin, natural wrinkles, realistic knuckle crease, natural cuticle, and proportional nail bed; avoid twig-like, branch-like, root-like, wooden-stick, claw, rubber-limb, melted-tube, or plant-stem fingers.";
   const hasAnatomyGuardrail = /\bexactly one adult fingernail\b/i.test(normalized);
   const hasTextGuardrail = /\b(no|without|avoid|do not).{0,80}\b(text|letters|words|typography|logos)\b/i.test(normalized);
+  const hasRealismGuardrail = /\b(real healthy human finger|normal bone structure|twig-like|branch-like|plant-stem)\b/i.test(normalized);
 
-  if (hasAnatomyGuardrail && hasTextGuardrail) return normalized;
-  if (hasAnatomyGuardrail) return `${normalized}${textGuardrail}`;
+  if (hasAnatomyGuardrail && hasTextGuardrail && hasRealismGuardrail) return normalized;
+  if (hasAnatomyGuardrail) {
+    return `${normalized}${hasRealismGuardrail ? "" : realismGuardrail}${hasTextGuardrail ? "" : textGuardrail}`;
+  }
 
-  return `${normalized} Anatomy guardrail: show exactly one adult fingernail on one natural finger, cropped from fingertip to first knuckle only; keep the palm, other fingers, whole hand, wrist, extra fingers, missing fingers, fused fingers, six or seven fingers, duplicated nails, and second hands out of frame.${hasTextGuardrail ? "" : textGuardrail}`;
+  return `${normalized} Anatomy guardrail: show exactly one adult fingernail on one natural finger, cropped from fingertip to first knuckle only; keep the palm, other fingers, whole hand, wrist, extra fingers, missing fingers, fused fingers, six or seven fingers, duplicated nails, and second hands out of frame.${hasRealismGuardrail ? "" : realismGuardrail}${hasTextGuardrail ? "" : textGuardrail}`;
 }
 
 export function normalizeFormDataForSave<T extends Record<string, unknown>>(

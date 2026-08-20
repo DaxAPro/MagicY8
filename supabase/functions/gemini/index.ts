@@ -17,11 +17,14 @@ const REQUEST_TIMEOUT_MS = 30_000;
 const NAIL_SINGLE_FINGER_RULE =
   "Show exactly one adult fingernail on one natural finger, cropped from fingertip to first knuckle only. Keep the palm, other fingers, whole hand, wrist, and duplicate nail beds out of frame.";
 
+const NAIL_REALISM_RULE =
+  "The finger must look like a real healthy human finger with normal bone structure, soft skin, natural wrinkles, realistic knuckle crease, natural cuticle, and proportional nail bed; it must never look like a twig, branch, root, wooden stick, claw, melted tube, rubber limb, or plant stem.";
+
 const NAIL_TEXT_AVOID_RULE =
   "Never paint or overlay readable text on the nail. Do not write letters, words, labels, logos, signatures, typography, captions, or the phrase nail art on the nail; express the concept only through decorative polish shapes, icons, color, shimmer, linework, charms, and pictorial motifs.";
 
 const NAIL_ANATOMY_AVOID =
-  "Avoid text on nails, readable words, letters, labels, typography, logos, full hands, five-finger hand poses, palms, wrists, extra fingers, missing fingers, fused fingers, six or seven fingers, duplicated nails, second hands, warped finger shapes, swollen cuticles, changing nail length, and changing nail shape.";
+  "Avoid text on nails, readable words, letters, labels, typography, logos, full hands, five-finger hand poses, palms, wrists, extra fingers, missing fingers, fused fingers, six or seven fingers, duplicated nails, second hands, warped finger shapes, twisted fingers, bent-back fingers, broken anatomy, branch-like fingers, twig-like fingers, root-like fingers, wooden-stick fingers, claw hands, rubber limbs, melted tubes, plant-stem skin, swollen cuticles, changing nail length, and changing nail shape.";
 
 const TATTOO_SUBJECT_RULE =
   "Clearly adult subject age 25+, polished glamorous fashion-editorial styling, confident elegant posture, realistic adult anatomy, tasteful wardrobe or draping only where needed for the selected tattoo area.";
@@ -513,6 +516,10 @@ function lacksNailTextGuardrail(text: string): boolean {
   return !/\b(no|without|avoid|do not|never).{0,90}\b(text|letters|words|typography|logos|captions|labels)\b/i.test(text);
 }
 
+function lacksNailRealismGuardrail(text: string): boolean {
+  return !/\b(real healthy human finger|normal bone structure|natural wrinkles|realistic knuckle|twig|branch|root|wooden|plant stem|plant-stem)\b/i.test(text);
+}
+
 function hasPositiveChestTattooPlacement(text: string): boolean {
   const pattern = /\b(chest tattoo|tattoo on (?:her|his|the )?chest|breast|cleavage|torso-focused|sternum tattoo|underboob)\b/gi;
   let match: RegExpExecArray | null;
@@ -584,6 +591,10 @@ function validatePromptQuality(
 
   if (toolType === "nails_video" && lacksNailTextGuardrail(generated)) {
     return { passed: false, reason: "nail_prompt_missing_text_guardrail" };
+  }
+
+  if (toolType === "nails_video" && lacksNailRealismGuardrail(generated)) {
+    return { passed: false, reason: "nail_prompt_missing_finger_realism_guardrail" };
   }
 
   if (toolType === "tattoo_video" && hasPositiveForbiddenTattooLook(generated)) {
@@ -685,10 +696,10 @@ function buildAiSystemInstruction(format: string, target: string): string {
     lines.push("- Make the art appear quickly in satisfying visible steps, like an image being generated live, but through realistic nail tools and polish behavior");
     lines.push("- Avoid AI-looking morphing, instant materialization, object melting, flickering, and unrealistic hand movement");
     lines.push("- Time-based progression with clear pacing");
-    lines.push("- Elegant adult hand model movement and satisfying nail-art process motion");
+    lines.push("- Elegant adult finger model movement and satisfying manicure process motion");
     lines.push("- Camera movement (coherent, non-contradictory)");
     lines.push("- Physical continuity and transition logic");
-    lines.push("- One stable adult hand model, nail shape, nail color, salon surface, and object state across the full shot");
+    lines.push("- One stable adult finger model, nail shape, nail color, salon surface, and object state across the full shot");
     lines.push("- Believable physics, spatial continuity, and cause-and-effect between actions");
     lines.push("- Concrete lens/framing and depth-of-field choices without conflicting camera commands");
     lines.push("- A restrained color palette, material texture, atmosphere, and environmental reactions");
@@ -737,6 +748,7 @@ function buildAiSystemInstruction(format: string, target: string): string {
   lines.push("- No contradictory camera motion such as static locked-off plus fast orbit in the same shot");
   lines.push("- No impossible anatomy, melting objects, duplicated subjects, or changing object identity");
   lines.push(`- ${NAIL_SINGLE_FINGER_RULE}`);
+  lines.push(`- ${NAIL_REALISM_RULE}`);
   lines.push(`- ${NAIL_TEXT_AVOID_RULE}`);
   lines.push(`- ${NAIL_ANATOMY_AVOID}`);
   lines.push("- No vague filler such as cinematic masterpiece, ultra-detailed, or best quality");
@@ -791,7 +803,7 @@ function buildAiUserInstruction(data: Record<string, unknown>, previousPrompt?: 
   lines.push(`Process style: ${processStyleInstruction("nails_video", processStyle)}`);
   lines.push(`Color mode: ${colorModeInstruction("nails_video", colorMode)}`);
   lines.push("Curiosity rule: do not let the viewer identify the final nail design in the opening. Show cropped macro fragments first, then connect them into the full design only in the final 1.5-2 seconds.");
-  lines.push(`Anatomy rule: ${NAIL_SINGLE_FINGER_RULE} ${NAIL_ANATOMY_AVOID} Avoid AI-looking morphs.`);
+  lines.push(`Anatomy rule: ${NAIL_SINGLE_FINGER_RULE} ${NAIL_REALISM_RULE} ${NAIL_ANATOMY_AVOID} Avoid AI-looking morphs.`);
   lines.push(`Text rule: ${NAIL_TEXT_AVOID_RULE}`);
   lines.push("Beauty rule: improve the idea with premium salon styling, clean composition, realistic tool steps, glossy finish, and a strong final thumbnail; do not merely enlarge or restate the user's words.");
   lines.push(`Shot design: ${shotType}`);
@@ -837,7 +849,7 @@ function buildAiRetryInstruction(
   userLines.push(`Process style: ${processStyleInstruction("nails_video", String(data.revealStyle ?? "mystery_macro_build"))}`);
   userLines.push(`Color mode: ${colorModeInstruction("nails_video", String(data.colorMode ?? "soft_pastel"))}`);
   userLines.push("Do not show the complete nail art at the start. Use macro fragments, fast realistic brush/tool steps, then a final pullback.");
-  userLines.push(`Anatomy rule: ${NAIL_SINGLE_FINGER_RULE} ${NAIL_ANATOMY_AVOID}`);
+  userLines.push(`Anatomy rule: ${NAIL_SINGLE_FINGER_RULE} ${NAIL_REALISM_RULE} ${NAIL_ANATOMY_AVOID}`);
   userLines.push(`Text rule: ${NAIL_TEXT_AVOID_RULE}`);
   userLines.push("Preserve the concept while SUBSTANTIALLY improving the production detail and wording.");
   userLines.push("The output must be meaningfully different from both the original Core Idea and any previous generation.");
@@ -1287,7 +1299,7 @@ function buildLocalNailsPrompt(data: Record<string, unknown>, recentPrompts: str
     "Build the art in fast readable passes without AI morphing, melting polish, duplicated nails, or changing nail shape.",
     "Let the final pattern connect only during the last 1.5 seconds, then hold a sharp social-media thumbnail frame.",
   ];
-  return `A 9:16 vertical ${duration} AI video prompt for Google Flow. ${hooks[variant]} Create ${nailStyle} on a ${nailShape} nail using ${nailColor}. Core idea: ${coreIdea}. Express the idea as decorative manicure shapes, icons, color, shimmer, linework, charms, and pictorial motifs only, never as written words. ${trendLine} Video style: ${processStyleInstruction("nails_video", processStyle)} Color mode: ${colorModeInstruction("nails_video", colorMode)} Camera: ${camera}; lighting: ${lighting}; stable fingertip macro framing. ${buildBeats[variant]} ${NAIL_SINGLE_FINGER_RULE} ${NAIL_TEXT_AVOID_RULE} ${NAIL_ANATOMY_AVOID} Keep the result elegant, clean, glossy, and thumbnail-ready instead of a plain enlarged prompt. Avoid messy failure looks, random scribbles, wipe-away tricks, captions, logos, watermarks, blur, flicker, and AI morphing. The final 1.5-2 seconds must be the first clean full finished manicure hero view, sharp, glossy, centered, and fully inside the frame.`;
+  return `A 9:16 vertical ${duration} AI video prompt for Google Flow. ${hooks[variant]} Create ${nailStyle} on a ${nailShape} nail using ${nailColor}. Core idea: ${coreIdea}. Express the idea as decorative manicure shapes, icons, color, shimmer, linework, charms, and pictorial motifs only, never as written words. ${trendLine} Video style: ${processStyleInstruction("nails_video", processStyle)} Color mode: ${colorModeInstruction("nails_video", colorMode)} Camera: ${camera}; lighting: ${lighting}; stable fingertip-only macro framing. ${buildBeats[variant]} ${NAIL_SINGLE_FINGER_RULE} ${NAIL_REALISM_RULE} ${NAIL_TEXT_AVOID_RULE} ${NAIL_ANATOMY_AVOID} Keep the result elegant, clean, glossy, and thumbnail-ready instead of a plain enlarged prompt. Avoid messy failure looks, random scribbles, wipe-away tricks, captions, logos, watermarks, blur, flicker, and AI morphing. The final 1.5-2 seconds must be the first clean full finished manicure hero view, sharp, glossy, centered, and fully inside the frame.`;
 }
 
 function buildLocalTattooPrompt(data: Record<string, unknown>, recentPrompts: string[], onlineTrends: TrendIdea[], previousPrompt?: string): string {
