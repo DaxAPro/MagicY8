@@ -39,6 +39,8 @@ jobs:
           VITE_FIREBASE_STORAGE_BUCKET: magicy8-ai.firebasestorage.app
           VITE_FIREBASE_MESSAGING_SENDER_ID: "1004992199689"
           VITE_FIREBASE_APP_ID: "1:1004992199689:web:46e9aa031c64ea33c4ccd8"
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4

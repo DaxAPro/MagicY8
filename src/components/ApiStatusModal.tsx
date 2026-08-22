@@ -23,7 +23,7 @@ import {
   LuTriangleAlert,
   LuX,
 } from "react-icons/lu"
-import { GeminiError, testGeminiConnection } from "../services/geminiApi"
+import { GeminiError, hasPromptServerConnector, testGeminiConnection } from "../services/geminiApi"
 import {
   getApiKey,
   maskApiKey,
@@ -82,7 +82,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
     const k = getApiKey()
     requestAnimationFrame(() => {
       setSavedKey(k)
-      if (k) setConnState("key_saved")
+      if (k) setConnState(hasPromptServerConnector() ? "key_saved" : "setup_missing")
     })
   }, [])
 
@@ -155,7 +155,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
       const result = await testGeminiConnection(keyToTest)
       if (result.ok) {
         setConnState("connected")
-        setTestMessage(result.model?.includes("Browser") ? "Firebase mode is ready. Prompts use the browser engine and save to Firebase." : `Connection successful! ${result.model ?? "AI provider"} is ready.`)
+        setTestMessage(`Connection successful! ${result.model ?? "AI provider"} is ready.`)
       } else {
         setConnState("connection_failed")
         setTestMessage("Connection failed. Check your API key.")

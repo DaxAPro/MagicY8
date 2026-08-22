@@ -123,6 +123,10 @@ function hasSupabaseSetup(): boolean {
   return !!SUPABASE_URL && !!SUPABASE_ANON_KEY && SUPABASE_URL !== "undefined";
 }
 
+export function hasPromptServerConnector(): boolean {
+  return hasSupabaseSetup();
+}
+
 export async function generatePrompt(
   toolType: ToolType,
   formData: Record<string, unknown>,
@@ -211,8 +215,13 @@ export async function getTrends(toolType: ToolType, apiKey?: string): Promise<Tr
 }
 
 export async function testGeminiConnection(apiKey: string): Promise<HealthCheckResult> {
+  void apiKey;
   if (!hasSupabaseSetup()) {
-    return { ok: true, model: "Browser free prompt engine + Firebase save" };
+    throw new GeminiError(
+      "AI server connector is missing. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to the GitHub Pages build, then redeploy.",
+      0,
+      "configuration",
+    );
   }
   return postJson<HealthCheckResult>({ action: "health_check" }, apiKey);
 }
