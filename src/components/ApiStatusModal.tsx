@@ -308,7 +308,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
                   <Input
                     ref={inputRef}
                     type={showKey ? "text" : "password"}
-                    placeholder="gsk_... or AIza..."
+                    placeholder="gsk_... or AIza... or AQ..."
                     value={keyInput}
                     onChange={(e) => {
                       setKeyInput(e.target.value)

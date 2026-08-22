@@ -7,13 +7,13 @@ const corsHeaders = {
 };
 
 // ─── Model configuration (server-side only, fixed approved list) ──────────
-const GROQ_PRIMARY_MODEL = "qwen/qwen3.6-27b";
-const GROQ_FALLBACK_MODELS = ["openai/gpt-oss-20b"];
+const GROQ_PRIMARY_MODEL = "openai/gpt-oss-20b";
+const GROQ_FALLBACK_MODELS = ["qwen/qwen3.6-27b"];
 
 const GROQ_API_BASE = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models";
-const GEMINI_PRIMARY_MODEL = "gemini-2.5-flash";
-const GEMINI_FALLBACK_MODELS = ["gemini-2.0-flash"];
+const GEMINI_PRIMARY_MODEL = "gemini-3.7-flash";
+const GEMINI_FALLBACK_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash"];
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -151,6 +151,14 @@ type GeminiResponse = {
   error?: { message?: string; status?: string; code?: number };
 };
 
+type GeminiInteractionResponse = {
+  steps?: Array<{
+    type?: string;
+    content?: Array<{ type?: string; text?: string }>;
+  }>;
+  error?: { message?: string; status?: string; code?: number };
+};
+
 type CallResult = {
   text: string;
   modelUsed: string;
@@ -182,9 +190,12 @@ function generateId(): string {
   return `gen_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/** Redact any string starting with gsk_ from logs */
+/** Redact user API keys from logs. */
 function redactKey(s: string): string {
-  return s.replace(/gsk_[A-Za-z0-9]+/g, "gsk_[REDACTED]");
+  return s
+    .replace(/gsk_[A-Za-z0-9_-]+/g, "gsk_[REDACTED]")
+    .replace(/AIza[A-Za-z0-9_-]+/g, "AIza[REDACTED]")
+    .replace(/AQ\.[A-Za-z0-9._-]+/g, "AQ.[REDACTED]");
 }
 
 function safeLog(entry: Record<string, unknown>): void {
@@ -340,7 +351,7 @@ function getUserCredential(req: Request): UserCredential | null {
     return { provider: "groq", key: groqKey };
   }
 
-  if ((requestedProvider === "gemini" || !requestedProvider) && /^AIza[A-Za-z0-9_-]{20,180}$/.test(geminiKey)) {
+  if ((requestedProvider === "gemini" || !requestedProvider) && /^(?:AIza[A-Za-z0-9_-]{20,180}|AQ\.[A-Za-z0-9._-]{20,240})$/.test(geminiKey)) {
     return { provider: "gemini", key: geminiKey };
   }
 
@@ -386,28 +397,6 @@ class GeminiCallError extends Error {
 interface GroqMessage {
   role: "system" | "user" | "assistant";
   content: string;
-}
-
-function geminiContentFromMessages(messages: GroqMessage[]): {
-  systemInstruction?: { parts: Array<{ text: string }> };
-  contents: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }>;
-} {
-  const systemText = messages
-    .filter((message) => message.role === "system")
-    .map((message) => message.content)
-    .join("\n\n")
-    .trim();
-  const contents = messages
-    .filter((message) => message.role !== "system")
-    .map((message) => ({
-      role: message.role === "assistant" ? "model" as const : "user" as const,
-      parts: [{ text: message.content }],
-    }));
-
-  return {
-    ...(systemText ? { systemInstruction: { parts: [{ text: systemText }] } } : {}),
-    contents: contents.length ? contents : [{ role: "user", parts: [{ text: "Generate the requested prompt." }] }],
-  };
 }
 
 /** Calls a single Groq model with the user's key. */
@@ -513,17 +502,16 @@ async function callGeminiModel(
   maxTokens: number,
   temperature: number,
 ): Promise<string> {
-  const body = {
-    ...geminiContentFromMessages(messages),
-    generationConfig: {
-      temperature,
-      maxOutputTokens: maxTokens,
-    },
-  };
+  void maxTokens;
+  void temperature;
+  const input = messages
+    .map((message) => `${message.role.toUpperCase()}:\n${message.content}`)
+    .join("\n\n");
+  const body = { model, input, store: false };
 
   let res: Response;
   try {
-    res = await fetch(`${GEMINI_API_BASE}/models/${model}:generateContent`, {
+    res = await fetch(`${GEMINI_API_BASE}/interactions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -540,18 +528,21 @@ async function callGeminiModel(
     const errText = await res.text().catch(() => "");
     let errMsg = `Gemini error (${res.status}).`;
     try {
-      const parsed = JSON.parse(errText) as GeminiResponse;
+      const parsed = JSON.parse(errText) as GeminiResponse | GeminiInteractionResponse;
       if (parsed.error?.message) errMsg = parsed.error.message;
     } catch { /* use default */ }
     throw new GeminiCallError(errMsg, res.status, errText);
   }
 
-  const data = await res.json().catch(() => null) as GeminiResponse | null;
+  const data = await res.json().catch(() => null) as GeminiInteractionResponse | null;
   if (!data) throw new GeminiCallError("Gemini returned an empty response.", 200);
   if (data.error?.message) throw new GeminiCallError(data.error.message, data.error.code ?? res.status);
 
-  const text = data.candidates?.[0]?.content?.parts
-    ?.map((part) => part.text ?? "")
+  const text = data.steps
+    ?.filter((step) => step.type === "model_output")
+    .flatMap((step) => step.content ?? [])
+    .filter((part) => part.type === "text")
+    .map((part) => part.text ?? "")
     .join("")
     .trim();
   if (!text) throw new GeminiCallError("Gemini returned an empty response.", 200);

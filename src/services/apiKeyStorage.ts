@@ -56,10 +56,11 @@ export function maskApiKey(key: string): string {
 }
 
 export function validateKeyFormat(key: string): string | null {
-  if (!key.trim()) return "API key is required.";
-  if (!key.startsWith("gsk_") && !key.startsWith("AIza")) {
-    return "Use a Groq key starting with gsk_ or a Gemini key starting with AIza.";
+  const trimmed = key.trim();
+  if (!trimmed) return "API key is required.";
+  if (!trimmed.startsWith("gsk_") && !trimmed.startsWith("AIza") && !trimmed.startsWith("AQ.")) {
+    return "Use a Groq key starting with gsk_ or a Gemini key starting with AIza or AQ.";
   }
-  if (key.length < 20) return "API key is too short.";
+  if (trimmed.length < 20) return "API key is too short.";
   return null;
 }
