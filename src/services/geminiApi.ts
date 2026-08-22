@@ -1,14 +1,11 @@
 import { buildBrowserLocalPrompt, getLocalTrends } from "./localPromptEngine";
 import { safeShortId } from "./id";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/gemini`;
 const DIRECT_GEMINI_MODEL = "gemini-3.7-flash";
 const GEMINI_INTERACTIONS_URL = "https://generativelanguage.googleapis.com/v1beta/interactions";
 
-function apiProviderForKey(apiKey: string): "groq" | "gemini" {
-  return apiKey.startsWith("gsk_") ? "groq" : "gemini";
+function isGeminiKey(apiKey: string): boolean {
+  return apiKey.startsWith("AIza") || apiKey.startsWith("AQ.");
 }
 
 export type ToolType = "nails_video" | "tattoo_video";
@@ -71,71 +68,6 @@ type GeminiInteractionResponse = {
 export function shouldUseLocalPromptFallback(err: unknown): boolean {
   if (!(err instanceof GeminiError)) return true;
   return ["configuration", "network", "timeout", "model_unavailable", "empty"].includes(err.code ?? "");
-}
-
-async function postJson<T>(body: unknown, apiKey?: string): Promise<T> {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL === "undefined") {
-    throw new GeminiError(
-      "Server connector is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local, then restart the app.",
-      0,
-      "configuration",
-    );
-  }
-
-  let res: Response;
-  try {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      apikey: SUPABASE_ANON_KEY,
-    };
-    if (apiKey) {
-      const provider = apiProviderForKey(apiKey);
-      headers["X-User-AI-Provider"] = provider;
-      headers[provider === "groq" ? "X-User-Groq-Key" : "X-User-Gemini-Key"] = apiKey;
-    }
-
-    res = await fetch(FUNCTION_URL, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(45_000),
-    });
-  } catch {
-    throw new GeminiError("Could not connect to the prompt server.", 0, "network");
-  }
-
-  let data: unknown;
-  try {
-    data = await res.json();
-  } catch {
-    throw new GeminiError(`Invalid response (${res.status}).`, res.status);
-  }
-
-  if (!res.ok) {
-    const obj = data as { error?: unknown } | null;
-    const msg =
-      obj && typeof obj === "object" && "error" in obj
-        ? String(obj.error)
-        : `Request failed (${res.status}).`;
-    let code: string | undefined;
-    if (res.status === 401 || res.status === 403) code = "invalid_key";
-    else if (res.status === 429) code = "rate_limit";
-    else if (res.status === 503) code = "model_unavailable";
-    else if (res.status === 504) code = "timeout";
-    else if (res.status === 502) code = "network";
-    throw new GeminiError(msg, res.status, code);
-  }
-
-  return data as T;
-}
-
-function hasSupabaseSetup(): boolean {
-  return !!SUPABASE_URL && !!SUPABASE_ANON_KEY && SUPABASE_URL !== "undefined";
-}
-
-export function hasPromptServerConnector(): boolean {
-  return hasSupabaseSetup();
 }
 
 function extractGeminiText(data: GeminiInteractionResponse): string {
@@ -241,22 +173,10 @@ export async function generatePrompt(
   apiKey: string,
   previousPrompt?: string,
 ): Promise<GenerateResult> {
-  if (!hasSupabaseSetup()) {
-    if (apiProviderForKey(apiKey) === "gemini") {
-      return generateDirectGeminiPrompt(toolType, formData, apiKey, previousPrompt);
-    }
-    return generateLocalPrompt(toolType, formData, previousPrompt);
+  if (isGeminiKey(apiKey)) {
+    return generateDirectGeminiPrompt(toolType, formData, apiKey, previousPrompt);
   }
-  const result = await postJson<GenerateResult>({
-    action: "generate_prompt",
-    toolType,
-    formData,
-    previousPrompt,
-  }, apiKey);
-  if (!result.prompt || typeof result.prompt !== "string") {
-    throw new GeminiError("The AI provider returned an empty response.", 502, "empty");
-  }
-  return result;
+  return generateLocalPrompt(toolType, formData, previousPrompt);
 }
 
 export async function generateLocalPrompt(
@@ -264,31 +184,13 @@ export async function generateLocalPrompt(
   formData: Record<string, unknown>,
   previousPrompt?: string,
 ): Promise<GenerateResult> {
-  if (!hasSupabaseSetup()) {
-    return {
-      prompt: buildBrowserLocalPrompt(toolType, formData, previousPrompt),
-      model: "Browser free prompt engine",
-      fallbackUsed: true,
-      generationId: `local_${Date.now()}_${safeShortId("run")}`,
-      sheetSaved: false,
-    };
-  }
-  const result = await postJson<GenerateResult>({
-    action: "generate_local_prompt",
-    toolType,
-    formData,
-    previousPrompt,
-  }).catch(() => ({
+  return {
     prompt: buildBrowserLocalPrompt(toolType, formData, previousPrompt),
     model: "Browser free prompt engine",
     fallbackUsed: true,
     generationId: `local_${Date.now()}_${safeShortId("run")}`,
     sheetSaved: false,
-  }));
-  if (!result.prompt || typeof result.prompt !== "string") {
-    throw new GeminiError("Free prompt engine returned an empty response.", 502, "empty");
-  }
-  return result;
+  };
 }
 
 export async function retrySheetSave(
@@ -301,38 +203,27 @@ export async function retrySheetSave(
   syncToken: string,
   apiKey: string,
 ): Promise<RetrySheetResult> {
-  return postJson<RetrySheetResult>({
-    action: "retry_sheet_save",
-    generationId,
-    toolType,
-    formData,
-    finalPrompt,
-    modelUsed,
-    fallbackUsed,
-    syncToken,
-  }, apiKey);
+  void generationId;
+  void toolType;
+  void formData;
+  void finalPrompt;
+  void modelUsed;
+  void fallbackUsed;
+  void syncToken;
+  void apiKey;
+  return { sheetSaved: false, sheetError: "Google Sheet retry is not available in browser-only mode." };
 }
 
 export async function getTrends(toolType: ToolType, apiKey?: string): Promise<TrendResult> {
-  if (!hasSupabaseSetup()) {
-    return { ideas: getLocalTrends(toolType), fallback: true, updatedAt: Date.now(), model: "Browser trend pool" };
-  }
-  return postJson<TrendResult>({ action: "get_trends", toolType }, apiKey).catch(() => ({
-    ideas: getLocalTrends(toolType),
-    fallback: true,
-    updatedAt: Date.now(),
-    model: "Browser trend pool",
-  }));
+  void apiKey;
+  return { ideas: getLocalTrends(toolType), fallback: true, updatedAt: Date.now(), model: "Browser trend pool" };
 }
 
 export async function testGeminiConnection(apiKey: string): Promise<HealthCheckResult> {
-  if (!hasSupabaseSetup()) {
-    if (apiProviderForKey(apiKey) === "gemini") {
-      const text = await callDirectGemini("Reply with exactly: ok", apiKey);
-      if (!/\bok\b/i.test(text)) throw new GeminiError("Gemini returned an unexpected response.", 502);
-      return { ok: true, model: `${DIRECT_GEMINI_MODEL} direct browser API` };
-    }
-    throw new GeminiError("Groq needs the server connector. Use a Gemini key, or add Supabase connector settings.", 0, "configuration");
+  if (!isGeminiKey(apiKey)) {
+    throw new GeminiError("Use a Gemini API key starting with AIza or AQ.", 0, "configuration");
   }
-  return postJson<HealthCheckResult>({ action: "health_check" }, apiKey);
+  const text = await callDirectGemini("Reply with exactly: ok", apiKey);
+  if (!/\bok\b/i.test(text)) throw new GeminiError("Gemini returned an unexpected response.", 502);
+  return { ok: true, model: `${DIRECT_GEMINI_MODEL} direct browser API` };
 }

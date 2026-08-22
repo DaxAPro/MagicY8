@@ -5,19 +5,18 @@ MagicY8 is a mobile-friendly AI video prompt studio for **Nails Style Video** an
 ## How It Works
 
 1. The React app collects the idea and video settings.
-2. MagicY8 builds a premium 9:16, 10-second prompt with the browser prompt engine.
+2. MagicY8 uses the user's Gemini key for direct AI prompt analysis when configured.
 3. Weak ideas are auto-improved before prompt generation.
 4. Successful prompts are saved to Firebase Firestore when Firebase config is available.
 5. Local history is used for learning better prompt patterns over time.
-6. If a Supabase connector is ever added again, the same UI can use it, but Supabase is not required for the current GitHub Pages setup.
+6. Without a Gemini key, prompt generation still works with the browser prompt engine.
 
 ## Current Production Mode
 
 The live GitHub Pages site is Firebase-first:
 
-- Supabase is not required.
 - Google Sheets is not required.
-- Groq or Gemini API key is optional.
+- Gemini API key is optional.
 - Prompt generation still works without an API key using the browser prompt engine.
 - Firebase Firestore saves generated prompts when Firebase config and Firestore rules are correct.
 
@@ -75,7 +74,6 @@ That means:
 
 Some legacy files remain for optional future integrations:
 
-- `supabase/` contains the optional AI connector Edge Function for Groq or Gemini keys.
 - `google-apps-script/` contains an old Google Sheets path.
 - `src/services/directGoogleSheets.ts` is optional and not part of the Firebase-first production flow.
 

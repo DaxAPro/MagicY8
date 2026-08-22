@@ -1,5 +1,4 @@
 const STORAGE_KEY = "magy8_session_ai_api_key";
-const GROQ_STORAGE_KEY = "magy8_session_groq_api_key";
 const LEGACY_STORAGE_KEY = "promptforge_groq_api_key";
 
 function removeLegacyKey(): void {
@@ -15,12 +14,7 @@ export function getApiKey(): string | null {
     removeLegacyKey();
     const currentKey = sessionStorage.getItem(STORAGE_KEY);
     if (currentKey) return currentKey;
-    const oldGroqKey = sessionStorage.getItem(GROQ_STORAGE_KEY);
-    if (oldGroqKey) {
-      sessionStorage.setItem(STORAGE_KEY, oldGroqKey);
-      sessionStorage.removeItem(GROQ_STORAGE_KEY);
-    }
-    return oldGroqKey;
+    return null;
   } catch {
     return null;
   }
@@ -30,7 +24,6 @@ export function saveApiKey(key: string): void {
   try {
     removeLegacyKey();
     sessionStorage.setItem(STORAGE_KEY, key);
-    sessionStorage.removeItem(GROQ_STORAGE_KEY);
   } catch {
     // ignore storage errors
   }
@@ -39,7 +32,6 @@ export function saveApiKey(key: string): void {
 export function removeApiKey(): void {
   try {
     sessionStorage.removeItem(STORAGE_KEY);
-    sessionStorage.removeItem(GROQ_STORAGE_KEY);
     removeLegacyKey();
   } catch {
     // ignore storage errors
@@ -58,8 +50,8 @@ export function maskApiKey(key: string): string {
 export function validateKeyFormat(key: string): string | null {
   const trimmed = key.trim();
   if (!trimmed) return "API key is required.";
-  if (!trimmed.startsWith("gsk_") && !trimmed.startsWith("AIza") && !trimmed.startsWith("AQ.")) {
-    return "Use a Groq key starting with gsk_ or a Gemini key starting with AIza or AQ.";
+  if (!trimmed.startsWith("AIza") && !trimmed.startsWith("AQ.")) {
+    return "Use a Gemini key starting with AIza or AQ.";
   }
   if (trimmed.length < 20) return "API key is too short.";
   return null;

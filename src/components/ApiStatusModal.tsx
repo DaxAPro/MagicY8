@@ -133,7 +133,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
   const handleTest = async () => {
     const keyToTest = savedKey ?? keyInput.trim()
     if (!keyToTest) {
-      setValidationError("Groq or Gemini API key is optional. Without it, MagicY8 uses the browser prompt engine and saves to Firebase.")
+      setValidationError("Gemini API key is optional. Without it, MagicY8 uses the browser prompt engine and saves to Firebase.")
       return
     }
     const fmtErr = validateKeyFormat(keyToTest)
@@ -224,7 +224,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
                 API Settings
               </DialogTitle>
               <Text textStyle="xs" color="gray.600" mt="0.5">
-                Firebase prompt database + optional Groq or Gemini key
+                Firebase prompt database + optional Gemini key
               </Text>
             </Box>
           </HStack>
@@ -302,13 +302,13 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
             ) : (
               <VStack gap="2" align="stretch">
                 <Text textStyle="xs" color="gray.500" fontWeight="medium">
-                  Optional Groq or Gemini API Key
+                  Optional Gemini API Key
                 </Text>
                 <HStack gap="2">
                   <Input
                     ref={inputRef}
                     type={showKey ? "text" : "password"}
-                    placeholder="gsk_... or AIza... or AQ..."
+                    placeholder="AIza... or AQ..."
                     value={keyInput}
                     onChange={(e) => {
                       setKeyInput(e.target.value)
@@ -348,7 +348,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
                 )}
                 {!validationError && (
                   <Text textStyle="xs" color="gray.600">
-                    Without a server connector, MagicY8 uses the browser prompt engine and saves prompts to Firebase.
+                    Without a Gemini key, MagicY8 uses the browser prompt engine and saves prompts to Firebase.
                   </Text>
                 )}
               </VStack>
