@@ -23,7 +23,7 @@ import {
   LuTriangleAlert,
   LuX,
 } from "react-icons/lu"
-import { GeminiError, hasPromptServerConnector, testGeminiConnection } from "../services/geminiApi"
+import { GeminiError, testGeminiConnection } from "../services/geminiApi"
 import {
   getApiKey,
   maskApiKey,
@@ -82,7 +82,7 @@ export function ApiStatusModal({ trigger, generating, lastUsedModel, forceOpenSi
     const k = getApiKey()
     requestAnimationFrame(() => {
       setSavedKey(k)
-      if (k) setConnState(hasPromptServerConnector() ? "key_saved" : "setup_missing")
+      if (k) setConnState("key_saved")
     })
   }, [])
 

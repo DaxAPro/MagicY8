@@ -4,6 +4,8 @@ import { safeShortId } from "./id";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/gemini`;
+const DIRECT_GEMINI_MODEL = "gemini-3.7-flash";
+const GEMINI_INTERACTIONS_URL = "https://generativelanguage.googleapis.com/v1beta/interactions";
 
 function apiProviderForKey(apiKey: string): "groq" | "gemini" {
   return apiKey.startsWith("gsk_") ? "groq" : "gemini";
@@ -56,6 +58,15 @@ export class GeminiError extends Error {
     this.name = "GeminiError";
   }
 }
+
+type GeminiInteractionResponse = {
+  output_text?: string;
+  steps?: Array<{
+    type?: string;
+    content?: Array<{ type?: string; text?: string }> | string;
+  }>;
+  error?: { message?: string; status?: string; code?: number };
+};
 
 export function shouldUseLocalPromptFallback(err: unknown): boolean {
   if (!(err instanceof GeminiError)) return true;
@@ -127,6 +138,103 @@ export function hasPromptServerConnector(): boolean {
   return hasSupabaseSetup();
 }
 
+function extractGeminiText(data: GeminiInteractionResponse): string {
+  const directText = data.output_text?.trim();
+  if (directText) return directText;
+
+  const stepText = data.steps
+    ?.filter((step) => step.type === "model_output")
+    .flatMap((step) => {
+      if (typeof step.content === "string") return [step.content];
+      return step.content ?? [];
+    })
+    .map((part) => typeof part === "string" ? part : part.type === "text" ? part.text ?? "" : "")
+    .join("")
+    .trim();
+
+  return stepText ?? "";
+}
+
+function buildDirectGeminiInstruction(
+  toolType: ToolType,
+  formData: Record<string, unknown>,
+  previousPrompt?: string,
+): string {
+  const browserDraft = buildBrowserLocalPrompt(toolType, formData, previousPrompt);
+  const coreIdea = String(formData.coreIdea ?? "").trim();
+  const toolName = toolType === "tattoo_video" ? "tattoo video" : "nails video";
+
+  return [
+    `You are MagicY8's AI prompt analyst for ${toolName} generation.`,
+    "Analyze the user's idea and selected settings, then create one polished English AI video prompt.",
+    "Preserve every named subject, motif, color, placement, and style from the user's idea. Do not replace the idea with a generic prompt.",
+    "The output must be 9:16 vertical, 10 seconds, cinematic, production-ready, and suitable for Google Flow, Veo, Sora, Runway, or Kling.",
+    "Use the draft below only as a safety and structure reference. Improve it with better visual analysis, clearer pacing, stronger cause-and-effect, and cleaner final reveal.",
+    "Output only the finished prompt text. No labels, no markdown, no explanation.",
+    "",
+    `User idea: ${coreIdea}`,
+    `Selected settings JSON: ${JSON.stringify(formData)}`,
+    previousPrompt ? `Previous prompt to avoid repeating: ${previousPrompt}` : "",
+    "",
+    `Safety/structure draft: ${browserDraft}`,
+  ].filter(Boolean).join("\n");
+}
+
+async function callDirectGemini(input: string, apiKey: string): Promise<string> {
+  let res: Response;
+  try {
+    res = await fetch(GEMINI_INTERACTIONS_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        model: DIRECT_GEMINI_MODEL,
+        store: false,
+        input,
+      }),
+      signal: AbortSignal.timeout(45_000),
+    });
+  } catch {
+    throw new GeminiError("Could not connect to Gemini from this browser.", 0, "network");
+  }
+
+  const data = await res.json().catch(() => null) as GeminiInteractionResponse | null;
+  if (!data) throw new GeminiError(`Invalid Gemini response (${res.status}).`, res.status);
+  if (!res.ok || data.error?.message) {
+    let code: string | undefined;
+    if (res.status === 401 || res.status === 403) code = "invalid_key";
+    else if (res.status === 429) code = "rate_limit";
+    else if (res.status === 503) code = "model_unavailable";
+    else if (res.status === 504) code = "timeout";
+    throw new GeminiError(data.error?.message ?? `Gemini request failed (${res.status}).`, res.status, code);
+  }
+
+  const text = extractGeminiText(data);
+  if (!text) throw new GeminiError("Gemini returned an empty response.", 502, "empty");
+  return text;
+}
+
+async function generateDirectGeminiPrompt(
+  toolType: ToolType,
+  formData: Record<string, unknown>,
+  apiKey: string,
+  previousPrompt?: string,
+): Promise<GenerateResult> {
+  const prompt = await callDirectGemini(
+    buildDirectGeminiInstruction(toolType, formData, previousPrompt),
+    apiKey,
+  );
+  return {
+    prompt,
+    model: `${DIRECT_GEMINI_MODEL} direct browser API`,
+    fallbackUsed: false,
+    generationId: `direct_${Date.now()}_${safeShortId("run")}`,
+    sheetSaved: false,
+  };
+}
+
 export async function generatePrompt(
   toolType: ToolType,
   formData: Record<string, unknown>,
@@ -134,6 +242,9 @@ export async function generatePrompt(
   previousPrompt?: string,
 ): Promise<GenerateResult> {
   if (!hasSupabaseSetup()) {
+    if (apiProviderForKey(apiKey) === "gemini") {
+      return generateDirectGeminiPrompt(toolType, formData, apiKey, previousPrompt);
+    }
     return generateLocalPrompt(toolType, formData, previousPrompt);
   }
   const result = await postJson<GenerateResult>({
@@ -215,13 +326,13 @@ export async function getTrends(toolType: ToolType, apiKey?: string): Promise<Tr
 }
 
 export async function testGeminiConnection(apiKey: string): Promise<HealthCheckResult> {
-  void apiKey;
   if (!hasSupabaseSetup()) {
-    throw new GeminiError(
-      "AI server connector is missing. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to the GitHub Pages build, then redeploy.",
-      0,
-      "configuration",
-    );
+    if (apiProviderForKey(apiKey) === "gemini") {
+      const text = await callDirectGemini("Reply with exactly: ok", apiKey);
+      if (!/\bok\b/i.test(text)) throw new GeminiError("Gemini returned an unexpected response.", 502);
+      return { ok: true, model: `${DIRECT_GEMINI_MODEL} direct browser API` };
+    }
+    throw new GeminiError("Groq needs the server connector. Use a Gemini key, or add Supabase connector settings.", 0, "configuration");
   }
   return postJson<HealthCheckResult>({ action: "health_check" }, apiKey);
 }
