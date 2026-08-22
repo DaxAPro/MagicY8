@@ -3,9 +3,15 @@ import { safeShortId } from "./id";
 
 const DIRECT_GEMINI_MODEL = "gemini-3.7-flash";
 const GEMINI_INTERACTIONS_URL = "https://generativelanguage.googleapis.com/v1beta/interactions";
+const DIRECT_GROQ_MODEL = "openai/gpt-oss-20b";
+const GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 function isGeminiKey(apiKey: string): boolean {
   return apiKey.startsWith("AIza") || apiKey.startsWith("AQ.");
+}
+
+function isGroqKey(apiKey: string): boolean {
+  return apiKey.startsWith("gsk_");
 }
 
 export type ToolType = "nails_video" | "tattoo_video";
@@ -65,6 +71,11 @@ type GeminiInteractionResponse = {
   error?: { message?: string; status?: string; code?: number };
 };
 
+type GroqChatResponse = {
+  choices?: Array<{ message?: { content?: string } }>;
+  error?: { message?: string; type?: string; code?: string };
+};
+
 export function shouldUseLocalPromptFallback(err: unknown): boolean {
   if (!(err instanceof GeminiError)) return true;
   return ["configuration", "network", "timeout", "model_unavailable", "empty"].includes(err.code ?? "");
@@ -87,7 +98,7 @@ function extractGeminiText(data: GeminiInteractionResponse): string {
   return stepText ?? "";
 }
 
-function buildDirectGeminiInstruction(
+function buildDirectAiInstruction(
   toolType: ToolType,
   formData: Record<string, unknown>,
   previousPrompt?: string,
@@ -148,6 +159,43 @@ async function callDirectGemini(input: string, apiKey: string): Promise<string> 
   return text;
 }
 
+async function callDirectGroq(input: string, apiKey: string): Promise<string> {
+  let res: Response;
+  try {
+    res = await fetch(GROQ_CHAT_COMPLETIONS_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: DIRECT_GROQ_MODEL,
+        messages: [{ role: "user", content: input }],
+        temperature: 0.85,
+        max_tokens: 1024,
+      }),
+      signal: AbortSignal.timeout(45_000),
+    });
+  } catch {
+    throw new GeminiError("Could not connect to Groq from this browser.", 0, "network");
+  }
+
+  const data = await res.json().catch(() => null) as GroqChatResponse | null;
+  if (!data) throw new GeminiError(`Invalid Groq response (${res.status}).`, res.status);
+  if (!res.ok || data.error?.message) {
+    let code: string | undefined;
+    if (res.status === 401 || res.status === 403) code = "invalid_key";
+    else if (res.status === 429) code = "rate_limit";
+    else if (res.status === 503) code = "model_unavailable";
+    else if (res.status === 504) code = "timeout";
+    throw new GeminiError(data.error?.message ?? `Groq request failed (${res.status}).`, res.status, code);
+  }
+
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new GeminiError("Groq returned an empty response.", 502, "empty");
+  return text;
+}
+
 async function generateDirectGeminiPrompt(
   toolType: ToolType,
   formData: Record<string, unknown>,
@@ -155,12 +203,31 @@ async function generateDirectGeminiPrompt(
   previousPrompt?: string,
 ): Promise<GenerateResult> {
   const prompt = await callDirectGemini(
-    buildDirectGeminiInstruction(toolType, formData, previousPrompt),
+    buildDirectAiInstruction(toolType, formData, previousPrompt),
     apiKey,
   );
   return {
     prompt,
     model: `${DIRECT_GEMINI_MODEL} direct browser API`,
+    fallbackUsed: false,
+    generationId: `direct_${Date.now()}_${safeShortId("run")}`,
+    sheetSaved: false,
+  };
+}
+
+async function generateDirectGroqPrompt(
+  toolType: ToolType,
+  formData: Record<string, unknown>,
+  apiKey: string,
+  previousPrompt?: string,
+): Promise<GenerateResult> {
+  const prompt = await callDirectGroq(
+    buildDirectAiInstruction(toolType, formData, previousPrompt),
+    apiKey,
+  );
+  return {
+    prompt,
+    model: `${DIRECT_GROQ_MODEL} direct browser API`,
     fallbackUsed: false,
     generationId: `direct_${Date.now()}_${safeShortId("run")}`,
     sheetSaved: false,
@@ -175,6 +242,9 @@ export async function generatePrompt(
 ): Promise<GenerateResult> {
   if (isGeminiKey(apiKey)) {
     return generateDirectGeminiPrompt(toolType, formData, apiKey, previousPrompt);
+  }
+  if (isGroqKey(apiKey)) {
+    return generateDirectGroqPrompt(toolType, formData, apiKey, previousPrompt);
   }
   return generateLocalPrompt(toolType, formData, previousPrompt);
 }
@@ -221,7 +291,12 @@ export async function getTrends(toolType: ToolType, apiKey?: string): Promise<Tr
 
 export async function testGeminiConnection(apiKey: string): Promise<HealthCheckResult> {
   if (!isGeminiKey(apiKey)) {
-    throw new GeminiError("Use a Gemini API key starting with AIza or AQ.", 0, "configuration");
+    if (isGroqKey(apiKey)) {
+      const text = await callDirectGroq("Reply with exactly: ok", apiKey);
+      if (!/\bok\b/i.test(text)) throw new GeminiError("Groq returned an unexpected response.", 502);
+      return { ok: true, model: `${DIRECT_GROQ_MODEL} direct browser API` };
+    }
+    throw new GeminiError("Use a Groq key starting with gsk_ or a Gemini key starting with AIza or AQ.", 0, "configuration");
   }
   const text = await callDirectGemini("Reply with exactly: ok", apiKey);
   if (!/\bok\b/i.test(text)) throw new GeminiError("Gemini returned an unexpected response.", 502);

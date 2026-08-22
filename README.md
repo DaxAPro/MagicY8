@@ -5,18 +5,18 @@ MagicY8 is a mobile-friendly AI video prompt studio for **Nails Style Video** an
 ## How It Works
 
 1. The React app collects the idea and video settings.
-2. MagicY8 uses the user's Gemini key for direct AI prompt analysis when configured.
+2. MagicY8 uses the user's Groq or Gemini key for direct AI prompt analysis when configured.
 3. Weak ideas are auto-improved before prompt generation.
 4. Successful prompts are saved to Firebase Firestore when Firebase config is available.
 5. Local history is used for learning better prompt patterns over time.
-6. Without a Gemini key, prompt generation still works with the browser prompt engine.
+6. Without an AI key, prompt generation still works with the browser prompt engine.
 
 ## Current Production Mode
 
 The live GitHub Pages site is Firebase-first:
 
 - Google Sheets is not required.
-- Gemini API key is optional.
+- Groq or Gemini API key is optional.
 - Prompt generation still works without an API key using the browser prompt engine.
 - Firebase Firestore saves generated prompts when Firebase config and Firestore rules are correct.
 
